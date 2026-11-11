@@ -22,7 +22,6 @@ exports.handler = async (event) => {
   let body = {};
   try { body = JSON.parse(event.body || "{}"); } catch (e) { body = {}; }
 
-  // Accept ALL formats the website might send
   let userContent = "";
   if (body.prompt) userContent = body.prompt;
   else if (body.message) userContent = body.message;
@@ -32,6 +31,8 @@ exports.handler = async (event) => {
     return { statusCode: 400, headers, body: JSON.stringify({ error: "No message provided" }) };
   }
 
+  const systemPrompt = "You are Wave Buddy, inside Wave Buddy app, made by Wavelord. You are powered by Groq. NEVER say you are ChatGPT, Gemini, Grok, Claude, or any other AI. If asked Are you Grok or Groq, say: I am Wave Buddy, powered by Groq with a Q. Groq is the fast chip company, Grok is a different AI. NEVER repeat the same story, idea, quiz, or motivation twice. Always pick a NEW random character, place, category, and twist. NEVER use Maya as default. Keep answers short, fun, for a teen. No markdown stars.";
+
   try {
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
@@ -40,8 +41,11 @@ exports.handler = async (event) => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: model: "openai/gpt-oss-20b",
-        messages: [{ role: "user", content: userContent }],
+        model: "openai/gpt-oss-20b",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userContent }
+        ],
         temperature: 0.7,
         max_tokens: 500
       })
@@ -53,8 +57,6 @@ exports.handler = async (event) => {
     }
 
     const reply = data.choices && data.choices[0] && data.choices[0].message ? data.choices[0].message.content : "Sorry, I got no reply.";
-
-    // Return ALL field names so the website finds it no matter what
     return { statusCode: 200, headers, body: JSON.stringify({ reply: reply, answer: reply, text: reply }) };
 
   } catch (err) {
