@@ -12,6 +12,7 @@ body{background:#0A0A0A;font-family:Inter, Arial, sans-serif;overflow:hidden;hei
 body.overlay #room{background:transparent}
 body.overlay #hint{display:none}
 #buddyWrap{position:absolute;left:50%;top:55%;transform:translate(-50%,-50%);width:130px;height:160px;z-index:10;cursor:grab;touch-action:none;will-change:transform}
+#buddyWrap.reminder-active{z-index:50}
 #spriteBox{width:130px;height:160px;position:relative;z-index:1;transition:transform .6s cubic-bezier(.25,1,.35,1);transform-origin:center center;filter:drop-shadow(0 12px 12px rgba(0,0,0,.45))}
 #spriteBox svg{width:130px;height:160px;overflow:visible}
 #spriteBox .body{transform-origin:50% 50%;transform-box:fill-box;transition:transform .6s cubic-bezier(.25,1,.35,1)}
@@ -130,7 +131,6 @@ body.chatting #thought{opacity:0!important}
 #captionBubble.show{display:block;animation:captionPop .5s cubic-bezier(.25,1,.35,1)}
 #captionBubble::after{content:'';position:absolute;bottom:-5px;left:50%;transform:translateX(-50%) rotate(45deg);width:10px;height:10px;background:#fff}
 @keyframes captionPop{0%{transform:translateX(-50%) translateY(8px) scale(.85);opacity:0}100%{transform:translateX(-50%) translateY(0) scale(1);opacity:1}}
-body.chatting #captionBubble{display:none!important}
 #miniLabel{position:absolute;top:-22px;left:50%;transform:translateX(-50%);background:#FFD700;color:#000;font-size:8px;font-weight:900;padding:3px 8px;border-radius:999px;white-space:nowrap;pointer-events:none}
 #moodDot{position:absolute;bottom:-30px;left:50%;transform:translateX(-50%);font-size:8px;color:#888;white-space:nowrap}
 #chatPanel{display:none;position:absolute;z-index:30;width:min(300px, calc(100vw - 20px));max-width:calc(100vw - 20px);background:#1E1E1E;border:2px solid #FFD700;border-radius:18px;box-shadow:0 12px 30px rgba(0,0,0,.8);overflow:hidden}
@@ -176,7 +176,7 @@ body.chatting #captionBubble{display:none!important}
   <div id="hint">drag buddy • tap to open/close • hold = cycle all 5 Platonic Solids + Robo</div>
 </div>
 <script>
-var TIMING = { idleMin: 9000, idleMax: 14000, moveDuration: 2600, captionEvery: 120000 };
+var TIMING = { idleMin: 7000, idleMax: 11000, moveDuration: 2600, captionEvery: 120000 };
 var AI_URL = '/.netlify/functions/ai';
 var AVATAR_ORDER = ['tetra','cube','crystal','dodeca','icosa','robot'];
 var currentAvatarKey = 'crystal';
@@ -272,7 +272,18 @@ function flipPronounsForYou(raw){
   s = s.replace(/\bI need\b/gi, 'YOU_NEED'); s = s.replace(/\bI have\b/gi, 'YOU_HAVE'); s = s.replace(/\bmy\b/gi, 'YOUR'); s = s.replace(/\bme\b/gi, 'YOU'); s = s.replace(/\bI am\b/gi, 'YOU_ARE'); s = s.replace(/\bI'm\b/gi, 'YOU_ARE'); s = s.replace(/\bI\b/g, 'YOU'); s = s.replace(/\bam\b/gi, 'ARE'); s = s.replace(/YOU_NEED/g, 'you need'); s = s.replace(/YOU_HAVE/g, 'you have'); s = s.replace(/YOUR/g, 'your'); s = s.replace(/YOU_ARE/g, 'you are'); s = s.replace(/\bYOU\b/g, 'you'); s = s.replace(/\bARE\b/g, 'are'); if(s.length > 0) s = s.charAt(0).toUpperCase() + s.slice(1); return s;
 }
 function cleanTaskText(text, delayMs){
-  var task = text.replace(/remind me/i, '').trim(); task = task.replace(/in\s+\d+\s*(seconds?|secs?|minutes?|mins?|hours?|hrs?)/i, '').trim(); task = task.replace(/at\s+\d{1,2}(:\d{2})?\s*(am|pm)?/i, '').trim(); if(!/^that\s+/i.test(task)) task = task.replace(/^to\s+/i, '').replace(/^that\s+/i, '').trim(); task = task.replace(/^\d+\s*(seconds?|minutes?|hours?)\s*/i, '').trim(); task = flipPronounsForYou(task); if(task.length === 0) task = 'Do something'; return task;
+  var task = text.trim();
+  task = task.replace(/^(can\s+u|can\s+you|could\s+you|please|hey|hi|yo)\b[\s,]+/gi, '');
+  task = task.replace(/remind\s+me(\s+to)?/gi, '').trim();
+  task = task.replace(/^(can\s+u|can\s+you|could\s+you|please)\b[\s,]+/gi, '');
+  task = task.replace(/in\s+\d+\s*(seconds?|secs?|minutes?|mins?|hours?|hrs?)/gi, '').trim();
+  task = task.replace(/at\s+\d{1,2}(:\d{2})?\s*(am|pm)?/gi, '').trim();
+  task = task.replace(/^to\s+/i, '').replace(/^that\s+/i, '').trim();
+  task = task.replace(/^\d+\s*(seconds?|minutes?|hours?)\s*/i, '').trim();
+  task = task.replace(/\s+please$/i,'').trim();
+  task = flipPronounsForYou(task);
+  if(task.length === 0) task = 'Do something';
+  return task;
 }
 function parseReminder(text){
   var lower=text.toLowerCase(); if(lower.indexOf('remind')===-1 && lower.indexOf('reminder')===-1) return null;
@@ -280,8 +291,26 @@ function parseReminder(text){
 }
 function formatDelay(delay){ if(delay < 60000) return Math.round(delay/1000)+' seconds'; if(delay < 3600000) return Math.round(delay/60000)+' min'; return (delay/3600000).toFixed(1)+' hours'; }
 function showCaption(text,duration){ if(isChatting) return; var cap=document.getElementById('captionBubble'); cap.textContent=text; cap.classList.add('show'); setTimeout(function(){ cap.classList.remove('show'); }, duration||6000); }
+function showReminderCaption(text,duration){
+  var cap=document.getElementById('captionBubble');
+  cap.textContent=text; cap.classList.add('show');
+  var wrap=document.getElementById('buddyWrap'); wrap.classList.add('reminder-active');
+  setTimeout(function(){ cap.classList.remove('show'); wrap.classList.remove('reminder-active'); }, duration||9000);
+}
 function openChatFromCaption(){ document.getElementById('captionBubble').classList.remove('show'); openChat(); }
-function checkReminders(){ var now=Date.now(); var changed=false; memory.reminders.forEach(function(r){ if(!r.done && r.time<=now){ r.done=true; changed=true; showCaption('⏰ '+r.text, 9000); setSpriteState('popping', 900, 'surprised'); if(isChatting) addMsg('buddy','⏰ Hey! '+r.text); } }); if(changed) saveMemory(memory); }
+function checkReminders(){
+  var now=Date.now(); var changed=false;
+  memory.reminders.forEach(function(r){
+    if(!r.done && r.time<=now){
+      r.done=true; changed=true;
+      showReminderCaption('⏰ '+r.text, 9000);
+      setSpriteState('popping', 900, 'surprised');
+      if(navigator.vibrate) navigator.vibrate([200,100,200]);
+      if(isChatting) addMsg('buddy','⏰ Hey! '+r.text);
+    }
+  });
+  if(changed) saveMemory(memory);
+}
 setInterval(checkReminders, 5000);
 function checkProactive(){ if(isChatting) return; var tc=getTimeContext(); var namePart=memory.name ? ', '+memory.name : ''; if(Math.random()<0.35){ var msgs=[]; if(tc.vibe==='morning') msgs=['☀️ '+tc.greeting+namePart+'! Ready?','🌅 Morning! What are we doing today?']; else if(tc.vibe==='afternoon') msgs=['🌤️ Afternoon'+namePart+', need a hand?','💧 Drink some water?']; else if(tc.vibe==='evening') msgs=['🌆 Evening'+namePart+'! How was today?','🍽️ Did you eat yet?']; else msgs=['🌙 It is late'+namePart+', you should sleep soon','😴 Late night? I am still here']; var msg=msgs[Math.floor(Math.random()*msgs.length)]; showCaption(msg, 7000); } }
 setInterval(checkProactive, TIMING.captionEvery);
@@ -457,8 +486,49 @@ function localFallbackAnswer(userText){
   }
   return 'Yo'+namePart+'! My AI is offline right now, but I heard you - you said "'+userText+'". Try me again when we are on GitHub, I will be full AI there.';
 }
+function playAllMoves(){
+  var moves = [
+    ['wavingSlow', 1600, 'happy', '👋'],
+    ['thumbsUp', 1600, 'happy', '👍 Nice!'],
+    ['salute', 1600, 'curious', '🫡 Yes sir!'],
+    ['shrug', 1600, 'curious', '🤷 I dunno'],
+    ['peekaboo', 1600, 'surprised', '👀 Peekaboo!'],
+    ['sitting', 1800, 'tired', '🪑 Sitting...'],
+    ['clapping', 1600, 'happy', '👏'],
+    ['kicking', 1600, 'curious', '🦵 Kick!'],
+    ['footTapping', 1600, 'curious', '🎵 Tap tap...'],
+    ['jumping', 1100, 'happy', '✨'],
+    ['spinning', 1200, 'happy', '🌀'],
+    ['dancing', 1600, 'happy', '🎵'],
+    ['juggling', 1600, 'happy', '🤹'],
+    ['peeking', 1600, 'curious', '👀 Peek!'],
+    ['stretching', 1600, 'tired', '🙆 Stretch!'],
+    ['sneezing', 1100, 'surprised', '🤧 Achoo!'],
+    ['yawning', 1800, 'tired', '🥱 Yawn...'],
+    ['thinking', 1600, 'curious', '💭 Hmm...'],
+    ['lookAround', 2200, 'curious', '👀 Hmm...'],
+    ['lying', 2000, 'tired', '😴 Resting...'],
+    ['popping', 900, 'surprised', '👋 I am back!'],
+    ['sleeping', 3000, 'sleepy', '💤 zzz']
+  ];
+  var i = 0;
+  function nextMove(){
+    if(i >= moves.length){ showThought('🎉 That is all 22!'); updateMood('idle'); return; }
+    var m = moves[i];
+    setSpriteState(m[0], m[1], m[2]);
+    showThought(m[3]);
+    updateMood(m[0] + ' • ' + (i+1) + '/22');
+    i++;
+    setTimeout(nextMove, m[1] + 300);
+  }
+  addMsg('buddy','Okay! Watch this - all my moves! 🎬');
+  nextMove();
+}
 async function askBuddy(userText){
   var lower=userText.toLowerCase();
+  if(lower.includes('show me all moves') || lower.includes('do all moves') || lower.includes('show me your moves') || lower.includes('demo mode')){
+    playAllMoves(); return;
+  }
   var switchMatch = lower.match(/(?:switch to|become|show me|turn into|i want|use)\s+(tetra|cube|crystal|dodeca|icosa|robo|robot|octahedron|octa)/);
   if(switchMatch){
     var map={octa:'crystal', octahedron:'crystal', robot:'robot'};
