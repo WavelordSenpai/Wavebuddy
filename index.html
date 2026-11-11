@@ -281,7 +281,7 @@ function parseReminder(text){
 function formatDelay(delay){ if(delay < 60000) return Math.round(delay/1000)+' seconds'; if(delay < 3600000) return Math.round(delay/60000)+' min'; return (delay/3600000).toFixed(1)+' hours'; }
 function showCaption(text,duration){ if(isChatting) return; var cap=document.getElementById('captionBubble'); cap.textContent=text; cap.classList.add('show'); setTimeout(function(){ cap.classList.remove('show'); }, duration||6000); }
 function openChatFromCaption(){ document.getElementById('captionBubble').classList.remove('show'); openChat(); }
-function checkReminders(){ var now=Date.now(); var changed=false; memory.reminders.forEach(function(r){ if(!r.done && r.time<=now){ r.done=true; changed=true; showCaption('⏰ '+r.text, 9000); setSpriteState('popping', 900, 'surprised'); speakText('Hey! '+r.text); if(isChatting) addMsg('buddy','⏰ Hey! '+r.text); } }); if(changed) saveMemory(memory); }
+function checkReminders(){ var now=Date.now(); var changed=false; memory.reminders.forEach(function(r){ if(!r.done && r.time<=now){ r.done=true; changed=true; showCaption('⏰ '+r.text, 9000); setSpriteState('popping', 900, 'surprised'); if(isChatting) addMsg('buddy','⏰ Hey! '+r.text); } }); if(changed) saveMemory(memory); }
 setInterval(checkReminders, 5000);
 function checkProactive(){ if(isChatting) return; var tc=getTimeContext(); var namePart=memory.name ? ', '+memory.name : ''; if(Math.random()<0.35){ var msgs=[]; if(tc.vibe==='morning') msgs=['☀️ '+tc.greeting+namePart+'! Ready?','🌅 Morning! What are we doing today?']; else if(tc.vibe==='afternoon') msgs=['🌤️ Afternoon'+namePart+', need a hand?','💧 Drink some water?']; else if(tc.vibe==='evening') msgs=['🌆 Evening'+namePart+'! How was today?','🍽️ Did you eat yet?']; else msgs=['🌙 It is late'+namePart+', you should sleep soon','😴 Late night? I am still here']; var msg=msgs[Math.floor(Math.random()*msgs.length)]; showCaption(msg, 7000); } }
 setInterval(checkProactive, TIMING.captionEvery);
@@ -491,7 +491,7 @@ async function askBuddy(userText){
   memory.chatCount=(memory.chatCount||0)+1; saveMemory(memory);
   var box=document.getElementById('spriteBox'); box.classList.add('talking'); setEmotion('happy'); updateMood('talking');
   addMsg('buddy','🤔 Thinking...'); var thinkingEl=document.getElementById('chatLog').lastChild;
-  try{ var res=await fetch(AI_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:getSystemPrompt()+'\n\nUser: '+userText+'\nBuddy:'})}); if(!res.ok) throw new Error('AI '+res.status); var data=await res.json(); var answer=data.answer||data.text||''; if(!answer) throw new Error('empty'); thinkingEl.remove(); addMsg('buddy',answer); showThought('💬'); speakText(answer); }catch(e){ thinkingEl.remove(); var fb=localFallbackAnswer(userText); addMsg('buddy',fb); }
+  try{ var res=await fetch(AI_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:getSystemPrompt()+'\n\nUser: '+userText+'\nBuddy:'})}); if(!res.ok) throw new Error('AI '+res.status); var data=await res.json(); var answer=data.answer||data.text||''; if(!answer) throw new Error('empty'); thinkingEl.remove(); addMsg('buddy',answer); showThought('💬'); }catch(e){ thinkingEl.remove(); var fb=localFallbackAnswer(userText); addMsg('buddy',fb); }
   box.classList.remove('talking'); setEmotion('idle'); updateMood('idle');
 }
 function sendChat(){ var input=document.getElementById('chatInput'); var text=input.value.trim(); if(!text) return; addMsg('you',text); input.value=''; askBuddy(text); }
