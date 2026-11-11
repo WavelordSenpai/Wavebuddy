@@ -1,33 +1,74 @@
 exports.handler = async (event) => {
-  const headers = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Allow-Methods': 'GET,POST,OPTIONS', 'Content-Type': 'application/json' };
-  if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers, body: '{}' };
+  const headers = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Content-Type": "application/json"
+  };
+
+  if (event.httpMethod === "OPTIONS") {
+    return { statusCode: 200, headers, body: "" };
+  }
+
+  if (event.httpMethod !== "POST") {
+    return { statusCode: 405, headers, body: JSON.stringify({ error: "Method not allowed" }) };
+  }
+
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) {
+    return { statusCode: 500, headers, body: JSON.stringify({ error: "GROQ_API_KEY is not set" }) };
+  }
+
+  let body = {};
   try {
-    let prompt = '';
-    if (event.queryStringParameters) prompt = event.queryStringParameters.prompt || event.queryStringParameters.message || event.queryStringParameters.q || '';
-    if (event.body) { try { const b = JSON.parse(event.body); prompt = prompt || b.prompt || b.message || b.text || b.question || b.input || ''; } catch(e){ prompt = prompt || event.body; } }
-    if (!prompt) return { statusCode: 400, headers, body: JSON.stringify({ answer: '', error: 'No prompt' }) };
-    const key = process.env.GROQ_API_KEY;
-    if (!key) return { statusCode: 500, headers, body: JSON.stringify({ answer: '', error: 'No GROQ_API_KEY - add it in Netlify' }) };
+    body = JSON.parse(event.body || "{}");
+  } catch (e) {
+    body = {};
+  }
 
-    const seed = Math.floor(Math.random() * 1000000);
-    const randomWords = ['crystal', 'neon', 'midnight', 'turbo', 'cosmic', 'secret', 'electric', 'shadow', 'golden', 'quantum'][Math.floor(Math.random()*10)];
+  const messages = body.messages || [];
+  const userMessage = body.message || "";
 
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+  let finalMessages = messages;
+  if (messages.length === 0 && userMessage) {
+    finalMessages = [{ role: "user", content: userMessage }];
+  }
+
+  if (finalMessages.length === 0) {
+    return { statusCode: 400, headers, body: JSON.stringify({ error: "No message provided" }) };
+  }
+
+  const systemPrompt = {
+    role: "system",
+    content: "You are Wave Buddy, a friendly AI assistant for friends. Be fun, helpful, and concise. Keep answers short and warm."
+  };
+
+  try {
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer " + apiKey,
+        "Content-Type": "application/json"
+      },
       body: JSON.stringify({
-        model: 'openai/gpt-oss-120b',
-        messages: [
-          { role: 'system', content: 'You are Wave Buddy, inside Wave Buddy app, made by Wavelord. You are powered by Groq. NEVER say you are ChatGPT, Gemini, Grok, Claude, or any other AI. If asked Are you Grok or Groq? Say: I am Wave Buddy, powered by Groq (with a Q). Groq is the fast chip company, Grok is a different AI. I am Wave Buddy.' NEVER repeat the same story, idea, quiz, or motivation twice. Always pick a NEW random character, place, category, and twist. NEVER use Maya as default. Keep answers short, fun, for a teen. No ** markdown stars.' },
-          { role: 'user', content: prompt + `\n\n[UPGRADE SEED: ${seed} - Word: ${randomWords} - You MUST give a completely NEW, different answer. Never repeat a previous idea, story, or character. Use the word ${randomWords} somewhere if it fits.]` }
-        ],
-        temperature: 1.0,
-        max_tokens: 1000
+        model: "llama-3.3-70b-versatile",
+        messages: [systemPrompt, ...finalMessages],
+        temperature: 0.7,
+        max_tokens: 500
       })
     });
-    const data = await res.json();
-    const text = data?.choices?.[0]?.message?.content || '';
-    if (!text) return { statusCode: 500, headers, body: JSON.stringify({ answer: '', error: 'Empty: ' + JSON.stringify(data).slice(0,600) }) };
-    return { statusCode: 200, headers, body: JSON.stringify({ answer: text, text: text, reply: text }) };
-  } catch(e){ return { statusCode: 500, headers, body: JSON.stringify({ answer: '', error: e.message }) }; }
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return { statusCode: response.status, headers, body: JSON.stringify({ error: "Groq API error", details: data }) };
+    }
+
+    const reply = data.choices && data.choices[0] && data.choices[0].message ? data.choices[0].message.content : "Sorry, I got no reply.";
+
+    return { statusCode: 200, headers, body: JSON.stringify({ reply: reply }) };
+
+  } catch (err) {
+    return { statusCode: 500, headers, body: JSON.stringify({ error: err.message }) };
+  }
 };
