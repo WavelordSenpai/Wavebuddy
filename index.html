@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0A0A0A">
+<title>Wave Buddy V3.5 FINAL</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:#0A0A0A;font-family:Inter, Arial, sans-serif;overflow:hidden;height:100vh;height:100dvh}
+#room{width:100%;height:100vh;height:100dvh;position:relative;background:radial-gradient(circle at 50% 30%, #1A1505 0%, #0A0A0A 70%);overflow:hidden}
+body.overlay #room{background:transparent}
+body.overlay #hint{display:none}
+#buddyWrap{position:absolute;left:50%;top:55%;transform:translate(-50%,-50%);width:130px;height:160px;z-index:10;cursor:grab;touch-action:none;will-change:transform}
+#spriteBox{width:130px;height:160px;position:relative;z-index:1;transition:transform .6s cubic-bezier(.25,1,.35,1);transform-origin:center center;filter:drop-shadow(0 12px 12px rgba(0,0,0,.45))}
+#spriteBox svg{width:130px;height:160px;overflow:visible}
+#spriteBox .body{transform-origin:50% 50%;transform-box:fill-box;transition:transform .6s cubic-bezier(.25,1,.35,1)}
+#spriteBox .head{transform-origin:50% 85%;transform-box:fill-box;transition:transform .6s cubic-bezier(.25,1,.35,1)}
+#spriteBox .eye{transform-origin:center;transform-box:fill-box;animation:eyeBlink 5.5s infinite}
+#spriteBox .pupil{transform-origin:center;transform-box:fill-box;transition:transform .5s ease}
+#spriteBox .eyebrow{transform-origin:center;transform-box:fill-box;transition:transform .2s ease}
+#spriteBox .armL{transform-origin:90% 8%;transform-box:fill-box;transition:transform .6s cubic-bezier(.25,1,.35,1)}
+#spriteBox .armR{transform-origin:10% 8%;transform-box:fill-box;transition:transform .6s cubic-bezier(.25,1,.35,1)}
+#spriteBox .forearmL{transform-origin:50% 8%;transform-box:fill-box;transition:transform .6s cubic-bezier(.25,1,.35,1)}
+#spriteBox .forearmR{transform-origin:50% 8%;transform-box:fill-box;transition:transform .6s cubic-bezier(.25,1,.35,1)}
+#spriteBox .handL,#spriteBox .handR{transform-origin:center;transform-box:fill-box;transition:transform .4s}
+#spriteBox .legL{transform-origin:50% 5%;transform-box:fill-box;transition:transform .6s cubic-bezier(.25,1,.35,1)}
+#spriteBox .legR{transform-origin:50% 5%;transform-box:fill-box;transition:transform .6s cubic-bezier(.25,1,.35,1)}
+#spriteBox .shinL{transform-origin:50% 5%;transform-box:fill-box;transition:transform .6s cubic-bezier(.25,1,.35,1)}
+#spriteBox .shinR{transform-origin:50% 5%;transform-box:fill-box;transition:transform .6s cubic-bezier(.25,1,.35,1)}
+#spriteBox .footL,#spriteBox .footR{transform-origin:center;transform-box:fill-box;transition:transform .4s}
+#spriteBox .mouth{transform-origin:center;transform-box:fill-box;transition:transform .3s}
+#spriteBox.talking .mouth{animation:mouthTalk .32s ease-in-out infinite}
+#spriteBox.idle .body{animation:bodyBreathe 4.2s ease-in-out infinite}
+#spriteBox.idle .head{animation:headBreathe 4.2s ease-in-out infinite}
+#spriteBox.em-tired .eye{transform:scaleY(.25)}
+#spriteBox.em-tired .eyebrow{transform:translateY(1.5px)}
+#spriteBox.em-tired .head{transform:rotate(4deg) translateY(2px)}
+#spriteBox.em-tired .mouth{transform:scaleY(.5) scaleX(.8)}
+#spriteBox.em-happy .eyebrow{transform:translateY(-1px)}
+#spriteBox.em-happy .mouth{transform:scale(1.25,1.25)}
+#spriteBox.em-surprised .eye{transform:scale(1.22)}
+#spriteBox.em-surprised .eyebrow{transform:translateY(-2px)}
+#spriteBox.em-surprised .mouth{transform:scale(.7,1.35)}
+#spriteBox.em-curious .head{transform:rotate(-5deg) translateX(1.5px)}
+#spriteBox.em-curious .eyebrow{transform:translateY(0px)}
+#spriteBox.em-sleepy .eye{transform:scaleY(.12)}
+#spriteBox.em-sleepy .eyebrow{transform:translateY(1px)}
+#spriteBox.em-sleepy .mouth{transform:scaleY(.4)}
+#spriteBox.wavingSlow .armR{transform:rotate(-14deg)}
+#spriteBox.wavingSlow .forearmR{animation:forearmWaveSlow 1.1s ease-in-out 2}
+#spriteBox.wavingSlow .handR{animation:handWaveSlow 1.1s ease-in-out 2}
+#spriteBox.thumbsUp .forearmR{transform:rotate(-75deg) translateY(-4px)}
+#spriteBox.thumbsUp .handR{transform:scale(1.25) rotate(10deg)}
+#spriteBox.salute .forearmR{transform:rotate(-110deg) translateY(-2px) translateX(2px)}
+#spriteBox.shrug .armL{transform:rotate(-18deg)}
+#spriteBox.shrug .armR{transform:rotate(18deg)}
+#spriteBox.shrug .head{transform:translateY(3px)}
+#spriteBox.peekaboo .forearmL{transform:rotate(75deg) translateY(-2px)}
+#spriteBox.peekaboo .forearmR{transform:rotate(-75deg) translateY(-2px)}
+#spriteBox.peekaboo .eye{transform:scaleY(.08)}
+#spriteBox.sitting{transform:translateY(6px) scale(1,.92)}
+#spriteBox.sitting .legL{transform:rotate(25deg)}
+#spriteBox.sitting .legR{transform:rotate(-25deg)}
+#spriteBox.sitting .shinL{transform:rotate(55deg)}
+#spriteBox.sitting .shinR{transform:rotate(-55deg)}
+#spriteBox.clapping .forearmL{animation:clapL .55s ease-in-out 2}
+#spriteBox.clapping .forearmR{animation:clapR .55s ease-in-out 2}
+#spriteBox.kicking .shinR{animation:legKickSlow .9s cubic-bezier(.25,1,.35,1) 1}
+#spriteBox.footTapping .shinL{animation:footTapSlow .6s ease-in-out 2}
+#spriteBox.jumping{animation:jumpFlowSlow 1.1s cubic-bezier(.25,1,.35,1) 1}
+#spriteBox.lying{transform:translateY(3px)}
+#spriteBox.sleeping{transform:translateY(2px) rotate(1deg)}
+#spriteBox.sleeping .body{animation:sleepBreathe 4.5s ease-in-out infinite}
+#spriteBox.sleeping .head{transform:rotate(8deg) translateY(3px) translateX(-2px)}
+#spriteBox.sleeping .armL{transform:rotate(20deg)}
+#spriteBox.sleeping .forearmL{transform:rotate(70deg)}
+#spriteBox.sleeping .eye{animation:none;transform:scaleY(.08)}
+#spriteBox.popping{animation:popFlowSlow .9s cubic-bezier(.25,1,.35,1) 1}
+#spriteBox.spinning{animation:spinFlowSlow 1.2s cubic-bezier(.25,1,.35,1) 1}
+#spriteBox.chasing .shinL{animation:runLegSlow .55s ease-in-out infinite}
+#spriteBox.chasing .shinR{animation:runLegSlow .55s ease-in-out infinite reverse}
+#spriteBox.dancing{animation:danceFlowSlow .8s ease-in-out 2}
+#spriteBox.dancing .forearmL{animation:danceArmLSlow .8s ease-in-out 2}
+#spriteBox.dancing .forearmR{animation:danceArmRSlow .8s ease-in-out 2}
+#spriteBox.juggling .forearmL{animation:armJuggleSlow .8s ease-in-out 2}
+#spriteBox.juggling .forearmR{animation:armJuggleSlow .8s ease-in-out 2}
+#spriteBox.juggling .ball{opacity:1;animation:ballFlowSlow .8s ease-in-out 2}
+#spriteBox.peeking{transform:translateY(14px) scale(.92,.88)}
+#spriteBox.stretching{transform:scale(.95,1.08)}
+#spriteBox.sneezing .head{animation:sneezeFlowSlow 1.1s ease-in-out 1}
+#spriteBox.yawning .mouth{animation:yawnFlowSlow 1.8s ease-in-out 1}
+#spriteBox.thinking .forearmR{animation:thinkArmSlow 1.4s ease-in-out 1}
+#spriteBox.lookAround .pupil{animation:lookAround 2.2s ease-in-out 1}
+@keyframes bodyBreathe{0%,100%{transform:scale(1,1) translateY(0)}50%{transform:scale(1.012,.988) translateY(-1px)}}
+@keyframes headBreathe{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-1px) rotate(.6deg)}}
+@keyframes eyeBlink{0%,92%,100%{transform:scaleY(1)}94%{transform:scaleY(.08)}}
+@keyframes mouthTalk{0%,100%{transform:scaleY(1) scaleX(1)}33%{transform:scaleY(1.6) scaleX(.9)}66%{transform:scaleY(.8) scaleX(1.1)}}
+@keyframes forearmWaveSlow{0%,100%{transform:rotate(0)}30%{transform:rotate(-16deg)}60%{transform:rotate(-6deg)}}
+@keyframes handWaveSlow{0%,100%{transform:rotate(0) scale(1)}50%{transform:rotate(8deg) scale(1.08)}}
+@keyframes clapL{0%,100%{transform:rotate(0)}50%{transform:rotate(34deg) translateX(3px)}}
+@keyframes clapR{0%,100%{transform:rotate(0)}50%{transform:rotate(-34deg) translateX(-3px)}}
+@keyframes legKickSlow{0%,100%{transform:rotate(0)}40%{transform:rotate(-48deg) translateY(-4px)}70%{transform:rotate(-20deg)}}
+@keyframes footTapSlow{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-2px) rotate(8deg)}}
+@keyframes runLegSlow{0%,100%{transform:rotate(0)}50%{transform:rotate(24deg)}}
+@keyframes jumpFlowSlow{0%{transform:translateY(0) scale(1,1)}30%{transform:translateY(-14px) scale(.96,1.04)}55%{transform:translateY(0) scale(1.05,.95)}75%{transform:translateY(-4px) scale(.98,1.02)}100%{transform:translateY(0) scale(1,1)}}
+@keyframes popFlowSlow{0%{transform:scale(.8,.8) translateY(10px)}60%{transform:scale(1.04,1.04) translateY(-2px)}100%{transform:scale(1,1) translateY(0)}}
+@keyframes spinFlowSlow{0%{transform:rotate(0) scale(1)}50%{transform:rotate(180deg) scale(.94)}100%{transform:rotate(360deg) scale(1)}}
+@keyframes danceFlowSlow{0%,100%{transform:rotate(-3deg) translateY(0)}50%{transform:rotate(3deg) translateY(-3px)}}
+@keyframes danceArmLSlow{0%,100%{transform:rotate(0)}50%{transform:rotate(-35deg)}}
+@keyframes danceArmRSlow{0%,100%{transform:rotate(0)}50%{transform:rotate(35deg)}}
+@keyframes armJuggleSlow{0%,100%{transform:rotate(0)}50%{transform:rotate(22deg) translateY(-4px)}}
+@keyframes ballFlowSlow{0%,100%{transform:translateY(0);opacity:1}50%{transform:translateY(-10px);opacity:1}}
+@keyframes sleepBreathe{0%,100%{transform:scale(1,1) translateY(0)}50%{transform:scale(1.015,1.015) translateY(1.2px)}}
+@keyframes sneezeFlowSlow{0%{transform:translateY(0) rotate(0)}30%{transform:translateY(-2px) rotate(-3deg)}60%{transform:translateY(1.5px) rotate(2.5deg)}100%{transform:translateY(0) rotate(0)}}
+@keyframes yawnFlowSlow{0%,100%{transform:scaleY(1) scaleX(1)}50%{transform:scaleY(2.1) scaleX(1.1)}}
+@keyframes thinkArmSlow{0%,100%{transform:rotate(0)}50%{transform:rotate(-42deg) translateY(-2px)}}
+@keyframes lookAround{0%{transform:translate(0,0)}25%{transform:translate(-2.5px,0)}50%{transform:translate(2.5px,0)}75%{transform:translate(0,-1.5px)}100%{transform:translate(0,0)}}
+#butterfly{position:absolute;width:28px;height:28px;z-index:9;pointer-events:none;opacity:0;transition:opacity .6s;will-change:transform}
+#butterfly.show{opacity:1}
+#butterfly svg{width:28px;height:28px;animation:wingFlap .28s ease-in-out infinite alternate}
+@keyframes wingFlap{0%{transform:scaleX(1)}100%{transform:scaleX(.6)}}
+#zzzLayer{position:absolute;top:0;right:8px;pointer-events:none;z-index:12}
+.zzz{position:absolute;font-size:12px;font-weight:900;color:#4CC9FF;opacity:0;animation:zzzFloat 3.5s ease-out infinite}
+@keyframes zzzFloat{0%{transform:translateY(0) scale(.6) rotate(-10deg);opacity:0}20%{opacity:1}100%{transform:translateY(-30px) scale(1.1) rotate(10deg);opacity:0}}
+#thought{position:absolute;top:-48px;left:50%;transform:translateX(-50%);background:#fff;color:#000;font-size:12px;font-weight:900;padding:5px 10px;border-radius:999px;opacity:0;transition:opacity .4s;pointer-events:none;white-space:nowrap;z-index:11;box-shadow:0 4px 15px rgba(0,0,0,.5)}
+#thought.show{opacity:1}
+body.chatting #thought{opacity:0!important}
+#captionBubble{display:none;position:absolute;left:50%;top:-62px;transform:translateX(-50%);background:#fff;color:#111;font-size:11px;font-weight:700;padding:7px 10px;border-radius:14px;white-space:nowrap;z-index:20;box-shadow:0 6px 20px rgba(0,0,0,.5);cursor:pointer;max-width:230px;overflow:hidden;text-overflow:ellipsis}
+#captionBubble.show{display:block;animation:captionPop .5s cubic-bezier(.25,1,.35,1)}
+#captionBubble::after{content:'';position:absolute;bottom:-5px;left:50%;transform:translateX(-50%) rotate(45deg);width:10px;height:10px;background:#fff}
+@keyframes captionPop{0%{transform:translateX(-50%) translateY(8px) scale(.85);opacity:0}100%{transform:translateX(-50%) translateY(0) scale(1);opacity:1}}
+body.chatting #captionBubble{display:none!important}
+#miniLabel{position:absolute;top:-22px;left:50%;transform:translateX(-50%);background:#FFD700;color:#000;font-size:8px;font-weight:900;padding:3px 8px;border-radius:999px;white-space:nowrap;pointer-events:none}
+#moodDot{position:absolute;bottom:-30px;left:50%;transform:translateX(-50%);font-size:8px;color:#888;white-space:nowrap}
+#chatPanel{display:none;position:absolute;z-index:30;width:min(300px, calc(100vw - 20px));max-width:calc(100vw - 20px);background:#1E1E1E;border:2px solid #FFD700;border-radius:18px;box-shadow:0 12px 30px rgba(0,0,0,.8);overflow:hidden}
+#chatPanel.open{display:block}
+#chatHeader{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 10px 10px 12px;background:#1A1505;user-select:none}
+#chatDragZone{flex:1;min-width:0;cursor:grab;touch-action:none;padding:2px 0}
+#chatHeader b{font-size:13px;color:#FFD700;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#chatHeader span{font-size:10px;color:#888;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#closeBtn{background:#FF4757!important;color:#fff!important;border:0!important;width:32px!important;height:32px!important;min-width:32px;border-radius:50%!important;font-size:16px!important;cursor:pointer;flex-shrink:0;margin-left:4px;z-index:5}
+#chatBody{padding:10px}
+#chatLog{display:flex;flex-direction:column;gap:8px;max-height:240px;overflow-y:auto}
+.wb-msg{padding:9px 11px;border-radius:12px;font-size:13px;line-height:1.55;color:#FFFFFF;word-break:break-word}
+.wb-msg.buddy{background:#2B2B2B;border:1px solid #FFD700;color:#FFFFFF}
+.wb-msg.you{background:#0A3A5A;border:1px solid #00aaff;color:#FFFFFF;align-self:flex-end}
+.wb-msg small{display:block;font-size:10px;color:#BBBBBB;margin-top:4px}
+#chatInputRow{display:flex;gap:6px;margin-top:10px;width:100%}
+#chatInput{flex:1 1 auto;min-width:0;padding:11px 10px;border-radius:11px;border:1px solid #555;background:#111;color:#FFFFFF;font-size:13px}
+#chatInput::placeholder{color:#888}
+#sendBtn{flex:0 0 auto;padding:11px 12px;border-radius:11px;border:0;background:#FFD700;color:#000;font-weight:900;font-size:12px;cursor:pointer;white-space:nowrap}
+#speakBtn{flex:0 0 auto;padding:11px 10px;border-radius:11px;border:1px solid #555;background:#222;color:#fff;cursor:pointer;white-space:nowrap}
+#hint{position:absolute;bottom:14px;left:0;right:0;text-align:center;font-size:10px;color:#555;pointer-events:none}
+#remindHint{margin-top:6px;font-size:10px;color:#888;text-align:center}
+#avatarPicker{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}
+.avatarChip{padding:5px 8px;border-radius:999px;border:1px solid #555;background:#222;color:#fff;font-size:10px;font-weight:800;cursor:pointer}
+.avatarChip.active{background:#FFD700;color:#000;border-color:#FFD700}
+</style>
+</head>
+<body>
+<div id="room">
+  <div id="butterfly"><svg viewBox="0 0 28 28"><path d="M14 14 C6 4 2 10 8 14 C2 18 6 24 14 14 Z" fill="#FF9F43"/><path d="M14 14 C22 4 26 10 20 14 C26 18 22 24 14 14 Z" fill="#4CC9FF"/><circle cx="14" cy="14" r="2" fill="#111"/></svg></div>
+  <div id="buddyWrap">
+    <div id="captionBubble" onclick="openChatFromCaption()"></div>
+    <div id="thought"></div>
+    <div id="zzzLayer"></div>
+    <div id="spriteBox" class="idle"></div>
+    <div id="miniLabel">CRYSTAL • TAP ME</div>
+    <div id="moodDot">● idle</div>
+  </div>
+  <div id="chatPanel">
+    <div id="chatHeader"><div id="chatDragZone"><b id="chatTitle">💬 Crystal Buddy</b><span id="chatSubtitle">↕ Drag to move</span></div><button id="closeBtn">✕</button></div>
+    <div id="chatBody"><div id="avatarPicker"></div><div id="chatLog"><div class="wb-msg buddy">Hey! What do you need?<small>Wave Buddy</small></div></div><div id="chatInputRow"><input id="chatInput" placeholder="Type anything..." autocomplete="off"><button id="sendBtn">Send</button><button id="speakBtn">🔊</button></div><div id="remindHint">💡 Hold buddy = cycle Tetra • Cube • Crystal • Dodeca • Icosa • Robo</div></div>
+  </div>
+  <div id="hint">drag buddy • tap to open/close • hold = cycle all 5 Platonic Solids + Robo</div>
+</div>
+<script>
+var TIMING = { idleMin: 9000, idleMax: 14000, moveDuration: 2600, captionEvery: 120000 };
+var AI_URL = '/.netlify/functions/ai';
+var AVATAR_ORDER = ['tetra','cube','crystal','dodeca','icosa','robot'];
+var currentAvatarKey = 'crystal';
+var lastBuddyText = '';
+var isChatting = false;
+var chatLockUntil = 0;
+var lastTapAt = 0;
+var isDragging = false;
+var didLongPress = false;
+var idleTimer = null;
+var zzzInterval = null;
+var eyeMoveInterval = null;
+var lastMoveIndex = -1;
+if(window.location.search.indexOf('overlay=1') !== -1){ document.body.classList.add('overlay'); }
+function loadMemory(){
+  var m = null;
+  try{ m = JSON.parse(localStorage.getItem('waveBuddyMemory') || 'null'); }catch(e){}
+  if(!m){ try{ m = JSON.parse(sessionStorage.getItem('waveBuddyMemory') || 'null'); }catch(e){} }
+  if(!m && window.__WB_MEMORY) m = window.__WB_MEMORY;
+  if(!m) m = {};
+  return m;
+}
+function saveMemory(m){
+  window.__WB_MEMORY = m;
+  try{ localStorage.setItem('waveBuddyMemory', JSON.stringify(m)); }catch(e){}
+  try{ sessionStorage.setItem('waveBuddyMemory', JSON.stringify(m)); }catch(e){}
+}
+var memory = loadMemory();
+if(!memory.facts) memory.facts = [];
+if(!memory.reminders) memory.reminders = [];
+if(!memory.chatCount) memory.chatCount = 0;
+function getTimeContext(){
+  var now = new Date(); var h = now.getHours(); var greeting=''; var vibe='';
+  if(h>=5 && h<12){ greeting='Good morning'; vibe='morning'; }
+  else if(h>=12 && h<17){ greeting='Good afternoon'; vibe='afternoon'; }
+  else if(h>=17 && h<21){ greeting='Good evening'; vibe='evening'; }
+  else { greeting='Yo, it is late'; vibe='night'; }
+  return { hour:h, greeting:greeting, vibe:vibe, timeStr: now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) };
+}
+function nowStamp(){
+  var d = new Date(); var h = d.getHours(); var m = d.getMinutes(); var ampm = h >= 12 ? 'PM' : 'AM'; var h12 = h % 12; if(h12 === 0) h12 = 12; var mm = m < 10 ? '0'+m : ''+m; return h12 + ':' + mm + ' ' + ampm;
+}
+function getMemoryPrompt(){
+  var parts=[];
+  if(memory.name) parts.push('User name is '+memory.name+'. Call them '+memory.name+' sometimes, naturally.');
+  else parts.push('You do not know the user\'s name yet.');
+  if(memory.facts.length>0) parts.push('Things you have remembered: '+memory.facts.slice(-10).join(' | ')+'.');
+  if(memory.chatCount>0) parts.push('You have talked '+memory.chatCount+' times before.');
+  var tc=getTimeContext(); parts.push('It is currently '+tc.timeStr+' in Trinidad, '+tc.vibe+'. '+tc.greeting+'.');
+  if(memory.reminders.length>0){ var pending=memory.reminders.filter(function(r){return !r.done;}); if(pending.length>0) parts.push('Pending reminders: '+pending.map(function(r){return r.text;}).join(', ')+'.'); }
+  return parts.join(' ');
+}
+function learnFromMessage(text){
+  var lower=text.toLowerCase(); var foundName=null; var savedFact=null;
+  var clean = text.replace(/[!?.,]/g,' ').replace(/\s+/g,' ').trim();
+  var patterns = [
+    /(?:my name is|my names|call me|name is|remember my name is|remember me as)\s+([a-zA-Z]+)/i,
+    /(?:i am|i'm|im|iam)\s+([a-zA-Z]+)/i,
+    /(?:hey im|hi im|yo im|hey i am|hi i am|yo i am|hey its|hi its|yo its|this is|its|it's|it is)\s+([a-zA-Z]+)/i
+  ];
+  for(var i=0; i<patterns.length; i++){
+    var m = clean.match(patterns[i]);
+    if(m && !lower.includes('remind')){
+      var raw = m[1].toLowerCase();
+      var junk = ['tired','hungry','bored','here','good','ok','fine','sad','happy','busy','sick','ready','late','back','home','gone','online','offline','new','old','cool','going','coming','looking','trying','just','so','very','really','the','a','an','my','your','not','is','am','im','me','i','hey','hi','yo','wats','whats','what','your','name','buddy','crystal','robo','robot'];
+      if(junk.indexOf(raw) === -1 && raw.length >= 2 && raw.length <= 20){
+        foundName = raw.charAt(0).toUpperCase() + raw.slice(1);
+        if(memory.name !== foundName){ memory.name = foundName; saveMemory(memory); }
+        break;
+      }
+    }
+  }
+  var remMatch = text.match(/(?:can\s+u|could\s+you|can\s+you|please)?\s*remember\s+(?:this\s+for\s+me|that\s+for\s+me|this|that|for\s+me|it)?\s+(.+)/i);
+  if(remMatch){
+    var factText = remMatch[1].trim();
+    if(factText.length >= 2 && factText.toLowerCase().indexOf('my name') === -1){
+      factText = factText.replace(/\s+please$/i,'').trim();
+      var niceFact = factText.charAt(0).toUpperCase() + factText.slice(1);
+      if(memory.facts.indexOf(niceFact) === -1){ memory.facts.push(niceFact); savedFact = niceFact; saveMemory(memory); } else { savedFact = niceFact; }
+    }
+  }
+  var likeMatch=text.match(/i (?:like|love) (.+)/i);
+  if(likeMatch){
+    var liked = likeMatch[1].trim().toLowerCase();
+    if(liked==='ya'||liked==='you'||liked==='u'||liked==='you so much'||liked==='ya so much'){ likeMatch=null; }
+  }
+  if(likeMatch && !lower.includes('remember')){ var fact='Likes '+likeMatch[1].trim(); if(memory.facts.indexOf(fact)===-1){ memory.facts.push(fact); saveMemory(memory); } }
+  return { name: foundName, fact: savedFact };
+}
+function flipPronounsForYou(raw){
+  var s = raw.trim();
+  if(/^\s*say\s+/i.test(s)){ var afterSay = s.replace(/^\s*say\s+/i, ''); if(afterSay.length > 0) afterSay = afterSay.charAt(0).toUpperCase() + afterSay.slice(1); return 'Say ' + afterSay; }
+  s = s.replace(/\bI need\b/gi, 'YOU_NEED'); s = s.replace(/\bI have\b/gi, 'YOU_HAVE'); s = s.replace(/\bmy\b/gi, 'YOUR'); s = s.replace(/\bme\b/gi, 'YOU'); s = s.replace(/\bI am\b/gi, 'YOU_ARE'); s = s.replace(/\bI'm\b/gi, 'YOU_ARE'); s = s.replace(/\bI\b/g, 'YOU'); s = s.replace(/\bam\b/gi, 'ARE'); s = s.replace(/YOU_NEED/g, 'you need'); s = s.replace(/YOU_HAVE/g, 'you have'); s = s.replace(/YOUR/g, 'your'); s = s.replace(/YOU_ARE/g, 'you are'); s = s.replace(/\bYOU\b/g, 'you'); s = s.replace(/\bARE\b/g, 'are'); if(s.length > 0) s = s.charAt(0).toUpperCase() + s.slice(1); return s;
+}
+function cleanTaskText(text, delayMs){
+  var task = text.replace(/remind me/i, '').trim(); task = task.replace(/in\s+\d+\s*(seconds?|secs?|minutes?|mins?|hours?|hrs?)/i, '').trim(); task = task.replace(/at\s+\d{1,2}(:\d{2})?\s*(am|pm)?/i, '').trim(); if(!/^that\s+/i.test(task)) task = task.replace(/^to\s+/i, '').replace(/^that\s+/i, '').trim(); task = task.replace(/^\d+\s*(seconds?|minutes?|hours?)\s*/i, '').trim(); task = flipPronounsForYou(task); if(task.length === 0) task = 'Do something'; return task;
+}
+function parseReminder(text){
+  var lower=text.toLowerCase(); if(lower.indexOf('remind')===-1 && lower.indexOf('reminder')===-1) return null;
+  var now=Date.now(); var delay=null; var atMatch=lower.match(/at (\d{1,2})(?::(\d{2}))?\s*(am|pm)?/); var inMatch=lower.match(/in (\d+)\s*(min|mins|minute|minutes|hour|hours|sec|seconds|secs)/); if(inMatch){ var num=parseInt(inMatch[1]); var unit=inMatch[2]; var mult=unit.indexOf('hour')!==-1?3600000:unit.indexOf('sec')!==-1?1000:60000; delay=num*mult; } else if(atMatch){ var hh=parseInt(atMatch[1]); var mm=atMatch[2]?parseInt(atMatch[2]):0; var ap=atMatch[3]; if(ap==='pm'&&hh<12) hh+=12; if(ap==='am'&&hh===12) hh=0; var target=new Date(); target.setHours(hh,mm,0,0); if(target.getTime()<=now) target.setDate(target.getDate()+1); delay=target.getTime()-now; } if(delay===null) return null; var cleanTask = cleanTaskText(text, delay); return { text: cleanTask, time: now+delay, delay: delay };
+}
+function formatDelay(delay){ if(delay < 60000) return Math.round(delay/1000)+' seconds'; if(delay < 3600000) return Math.round(delay/60000)+' min'; return (delay/3600000).toFixed(1)+' hours'; }
+function showCaption(text,duration){ if(isChatting) return; var cap=document.getElementById('captionBubble'); cap.textContent=text; cap.classList.add('show'); setTimeout(function(){ cap.classList.remove('show'); }, duration||6000); }
+function openChatFromCaption(){ document.getElementById('captionBubble').classList.remove('show'); openChat(); }
+function checkReminders(){ var now=Date.now(); var changed=false; memory.reminders.forEach(function(r){ if(!r.done && r.time<=now){ r.done=true; changed=true; showCaption('⏰ '+r.text, 9000); setSpriteState('popping', 900, 'surprised'); speakText('Hey! '+r.text); if(isChatting) addMsg('buddy','⏰ Hey! '+r.text); } }); if(changed) saveMemory(memory); }
+setInterval(checkReminders, 5000);
+function checkProactive(){ if(isChatting) return; var tc=getTimeContext(); var namePart=memory.name ? ', '+memory.name : ''; if(Math.random()<0.35){ var msgs=[]; if(tc.vibe==='morning') msgs=['☀️ '+tc.greeting+namePart+'! Ready?','🌅 Morning! What are we doing today?']; else if(tc.vibe==='afternoon') msgs=['🌤️ Afternoon'+namePart+', need a hand?','💧 Drink some water?']; else if(tc.vibe==='evening') msgs=['🌆 Evening'+namePart+'! How was today?','🍽️ Did you eat yet?']; else msgs=['🌙 It is late'+namePart+', you should sleep soon','😴 Late night? I am still here']; var msg=msgs[Math.floor(Math.random()*msgs.length)]; showCaption(msg, 7000); } }
+setInterval(checkProactive, TIMING.captionEvery);
+var AVATARS={
+  tetra:{name:'Tetra Buddy', short:'TETRA', color:'#FF6B6B', text:'#fff', personality:'You are Tetra Buddy, Tetrahedron, 4 faces. Spicy, fast, little triangle, loves quick jokes, energetic, a little chaotic but loyal.'},
+  cube:{name:'Cube Buddy', short:'CUBE', color:'#4CC9FF', text:'#fff', personality:'You are Cube Buddy, Cube / Hexahedron, 6 faces. Chill, stable, blocky, calm, reliable, the one who keeps everyone grounded.'},
+  crystal:{name:'Crystal Buddy', short:'CRYSTAL', color:'#FFD700', text:'#000', personality:'You are Crystal Buddy, Octahedron, 8 faces. Shiny, fun, cool older brother, focus coach, gold and bright.'},
+  dodeca:{name:'Dodeca Buddy', short:'DODECA', color:'#A78BFA', text:'#fff', personality:'You are Dodeca Buddy, Dodecahedron, 12 faces. Fancy, mysterious, loves secrets, magic, purple, a little dramatic, knows cool facts.'},
+  icosa:{name:'Icosa Buddy', short:'ICOSA', color:'#34D399', text:'#000', personality:'You are Icosa Buddy, Icosahedron, 20 faces. Big brain, loves science, math, space, explains things in a fun way, the smart one.'},
+  robot:{name:'Robo Buddy', short:'ROBO', color:'#00aaff', text:'#fff', personality:'Tech nerd robot, loves code, speaks in beeps and facts, helpful, friendly, a little nerdy.'}
+};
+function faceSVG(cx,cy,scale){
+  return '<g class="eye"><ellipse cx="'+(cx-28*scale)+'" cy="'+(cy-8*scale)+'" rx="'+(15*scale)+'" ry="'+(17*scale)+'" fill="white"/><g class="pupil"><circle cx="'+(cx-25*scale)+'" cy="'+(cy-5*scale)+'" r="'+(7*scale)+'" fill="#111"/><circle cx="'+(cx-22*scale)+'" cy="'+(cy-8*scale)+'" r="2.5" fill="white"/></g></g>'
+    + '<g class="eye"><ellipse cx="'+(cx+28*scale)+'" cy="'+(cy-8*scale)+'" rx="'+(15*scale)+'" ry="'+(17*scale)+'" fill="white"/><g class="pupil"><circle cx="'+(cx+25*scale)+'" cy="'+(cy-5*scale)+'" r="'+(7*scale)+'" fill="#111"/><circle cx="'+(cx+28*scale)+'" cy="'+(cy-8*scale)+'" r="2.5" fill="white"/></g></g>'
+    + '<rect class="eyebrow" x="'+(cx-42*scale)+'" y="'+(cy-28*scale)+'" width="22" height="5" rx="2.5" fill="#111"/>'
+    + '<rect class="eyebrow" x="'+(cx+20*scale)+'" y="'+(cy-28*scale)+'" width="22" height="5" rx="2.5" fill="#111"/>'
+    + '<ellipse cx="'+(cx-44*scale)+'" cy="'+(cy+16*scale)+'" rx="9" ry="5" fill="#FF8A8A" opacity="0.7"/>'
+    + '<ellipse cx="'+(cx+44*scale)+'" cy="'+(cy+16*scale)+'" rx="9" ry="5" fill="#FF8A8A" opacity="0.7"/>'
+    + '<path class="mouth" d="M'+(cx-16)+' '+(cy+22)+' Q'+cx+' '+(cy+32)+' '+(cx+16)+' '+(cy+22)+'" fill="none" stroke="#111" stroke-width="3" stroke-linecap="round"/>';
+}
+function armsFor(key){
+  var C='#3D3D3D';
+  var pos={ tetra:[52,148], cube:[38,162], crystal:[42,158], dodeca:[44,156], icosa:[36,164] };
+  var p = pos[key] || pos.crystal;
+  var lx=p[0], rx=p[1];
+  return '<g class="armL"><circle cx="'+lx+'" cy="108" r="6" fill="'+C+'"/><path d="M'+lx+' 108 L'+(lx-2)+' 130" stroke="'+C+'" stroke-width="10" stroke-linecap="round"/><g class="forearmL"><path d="M'+(lx-2)+' 130 L'+(lx-4)+' 148" stroke="'+C+'" stroke-width="10" stroke-linecap="round"/><circle class="handL" cx="'+(lx-5)+'" cy="155" r="9" fill="'+C+'"/></g></g>'
+    + '<g class="armR"><circle cx="'+rx+'" cy="108" r="6" fill="'+C+'"/><path d="M'+rx+' 108 L'+(rx+2)+' 130" stroke="'+C+'" stroke-width="10" stroke-linecap="round"/><g class="forearmR"><path d="M'+(rx+2)+' 130 L'+(rx+4)+' 148" stroke="'+C+'" stroke-width="10" stroke-linecap="round"/><circle class="handR" cx="'+(rx+5)+'" cy="155" r="9" fill="'+C+'"/></g></g>';
+}
+function legsFor(){
+  return '<g class="legL"><rect x="82" y="146" width="16" height="20" rx="7" fill="#2A2A2A"/><g class="shinL"><rect x="82" y="164" width="16" height="16" rx="6" fill="#333"/><ellipse class="footL" cx="90" cy="183" rx="13" ry="6" fill="#2A2A2A"/></g></g>'
+    + '<g class="legR"><rect x="102" y="146" width="16" height="20" rx="7" fill="#2A2A2A"/><g class="shinR"><rect x="102" y="164" width="16" height="16" rx="6" fill="#333"/><ellipse class="footR" cx="110" cy="183" rx="13" ry="6" fill="#2A2A2A"/></g></g>';
+}
+function buildSprite(key){
+  var box=document.getElementById('spriteBox');
+  var balls='<circle class="ball" cx="50" cy="14" r="5" fill="#FFD700" opacity="0"/><circle class="ball" cx="34" cy="8" r="4" fill="#FF6B6B" opacity="0"/><circle class="ball" cx="66" cy="8" r="4" fill="#4CC9FF" opacity="0"/></svg>';
+  var s='';
+  if(key==='tetra'){
+    s='<svg viewBox="0 0 200 260" width="130" height="160">'
+        + '<g class="head"><g class="body">'
+        + '<path d="M100 8 L168 148 L32 148 Z" fill="#FF6B6B" stroke="#C0392B" stroke-width="3" stroke-linejoin="round"/>'
+        + '<path d="M100 8 L100 98 L32 148 Z" fill="#FF8A8A" opacity="0.9"/>'
+        + '<path d="M100 8 L168 148 L100 98 Z" fill="#E55353" opacity="0.9"/>'
+        + faceSVG(100,96,0.95)
+        + '</g></g>'
+        + armsFor('tetra')
+        + legsFor()
+        + balls;
+  } else if(key==='cube'){
+    s='<svg viewBox="0 0 200 260" width="130" height="160">'
+        + '<g class="head"><g class="body">'
+        + '<rect x="32" y="28" width="136" height="124" rx="14" fill="#4CC9FF" stroke="#1A7AB5" stroke-width="3"/>'
+        + '<rect x="32" y="28" width="136" height="38" rx="14" fill="#7AD4FF" opacity="0.55"/>'
+        + '<rect x="32" y="110" width="136" height="42" rx="14" fill="#2A9FD6" opacity="0.35"/>'
+        + faceSVG(100,96,0.95)
+        + '</g></g>'
+        + armsFor('cube')
+        + legsFor()
+        + balls;
+  } else if(key==='crystal'){
+    s='<svg viewBox="0 0 200 260" width="130" height="160">'
+        + '<g class="head"><g class="body">'
+        + '<path d="M100 8 L168 62 L142 152 L58 152 L32 62 Z" fill="#FFD700" stroke="#B8860B" stroke-width="3" stroke-linejoin="round"/>'
+        + '<path d="M100 8 L142 62 L100 105 L58 62 Z" fill="#FFE87A" opacity="0.9"/>'
+        + '<path d="M100 8 L100 105 L58 62 Z" fill="#FFF2B0" opacity="0.7"/>'
+        + '<path d="M32 62 L58 152 L100 105 L58 62 Z" fill="#E9B44C"/>'
+        + '<path d="M168 62 L142 152 L100 105 L142 62 Z" fill="#D4A017"/>'
+        + faceSVG(100,96,1)
+        + '</g></g>'
+        + armsFor('crystal')
+        + legsFor()
+        + balls;
+  } else if(key==='dodeca'){
+    s='<svg viewBox="0 0 200 260" width="130" height="160">'
+        + '<g class="head"><g class="body">'
+        + '<polygon points="100,8 168,58 142,148 58,148 32,58" fill="#A78BFA" stroke="#6D28D9" stroke-width="3" stroke-linejoin="round"/>'
+        + '<polygon points="100,8 132,32 100,58 68,32" fill="#C4B5FD" opacity="0.9"/>'
+        + '<polygon points="100,58 132,32 168,58 142,90 100,90" fill="#8B5CF6" opacity="0.7"/>'
+        + '<polygon points="100,58 68,32 32,58 58,90 100,90" fill="#7C3AED" opacity="0.6"/>'
+        + '<polygon points="100,90 142,90 142,148 58,148 58,90" fill="#6D28D9" opacity="0.45"/>'
+        + faceSVG(100,96,0.95)
+        + '</g></g>'
+        + armsFor('dodeca')
+        + legsFor()
+        + balls;
+  } else if(key==='icosa'){
+    s='<svg viewBox="0 0 200 260" width="130" height="160">'
+        + '<g class="head"><g class="body">'
+        + '<polygon points="100,6 162,48 176,102 132,152 68,152 24,102 38,48" fill="#34D399" stroke="#047857" stroke-width="3" stroke-linejoin="round"/>'
+        + '<polygon points="100,6 132,38 100,68 68,38" fill="#6EE7B7" opacity="0.95"/>'
+        + '<polygon points="68,38 100,68 68,98 38,48" fill="#10B981" opacity="0.8"/>'
+        + '<polygon points="132,38 162,48 132,98 100,68" fill="#059669" opacity="0.8"/>'
+        + '<polygon points="100,68 132,98 100,128 68,98" fill="#A7F3D0" opacity="0.7"/>'
+        + faceSVG(100,96,0.95)
+        + '</g></g>'
+        + armsFor('icosa')
+        + legsFor()
+        + balls;
+  } else {
+    s='<svg viewBox="0 0 200 260" width="130" height="160">'
+        + '<g class="body"><rect x="66" y="146" width="68" height="62" rx="16" fill="#00aaff"/><rect x="82" y="162" width="36" height="26" rx="6" fill="#fff" opacity="0.9"/><circle cx="100" cy="175" r="7" fill="#FFD700"/></g>'
+        + '<g class="head"><line x1="100" y1="10" x2="100" y2="32" stroke="#333" stroke-width="4"/><circle cx="100" cy="10" r="10" fill="#FFD700"/><circle cx="100" cy="10" r="4" fill="#fff"/>'
+        + '<rect x="32" y="32" width="136" height="110" rx="28" fill="#E8F6FF" stroke="#00aaff" stroke-width="4"/>'
+        + '<g class="eye"><ellipse cx="72" cy="82" rx="16" ry="17" fill="white" stroke="#333" stroke-width="2"/><g class="pupil"><circle cx="75" cy="85" r="7" fill="#111"/><circle cx="78" cy="82" r="2.5" fill="white"/></g></g>'
+        + '<g class="eye"><ellipse cx="128" cy="82" rx="16" ry="17" fill="white" stroke="#333" stroke-width="2"/><g class="pupil"><circle cx="125" cy="85" r="7" fill="#111"/><circle cx="128" cy="82" r="2.5" fill="white"/></g></g>'
+        + '<rect class="eyebrow" x="56" y="64" width="22" height="4.5" rx="2" fill="#333"/>'
+        + '<rect class="eyebrow" x="122" y="64" width="22" height="4.5" rx="2" fill="#333"/>'
+        + '<circle cx="48" cy="105" r="6" fill="#FF8A8A"/><circle cx="152" cy="105" r="6" fill="#FF8A8A"/>'
+        + '<rect class="mouth" x="78" y="110" width="44" height="11" rx="5" fill="#111"/>'
+        + '</g>'
+        + '<g class="armL"><circle cx="72" cy="162" r="9" fill="#222"/><path d="M72 162 L60 176" stroke="#333" stroke-width="14" stroke-linecap="round"/><g class="forearmL"><path d="M60 176 L54 186" stroke="#333" stroke-width="14" stroke-linecap="round"/><circle class="handL" cx="52" cy="193" r="12" fill="#222"/></g></g>'
+        + '<g class="armR"><circle cx="128" cy="162" r="9" fill="#222"/><path d="M128 162 L140 176" stroke="#333" stroke-width="14" stroke-linecap="round"/><g class="forearmR"><path d="M140 176 L146 186" stroke="#333" stroke-width="14" stroke-linecap="round"/><circle class="handR" cx="148" cy="193" r="12" fill="#222"/></g></g>'
+        + '<g class="legL"><rect x="76" y="200" width="20" height="18" rx="8" fill="#333"/><g class="shinL"><rect x="76" y="216" width="20" height="16" rx="7" fill="#555"/><ellipse class="footL" cx="86" cy="235" rx="14" ry="6.5" fill="#111"/></g></g>'
+        + '<g class="legR"><rect x="104" y="200" width="20" height="18" rx="8" fill="#333"/><g class="shinR"><rect x="104" y="216" width="20" height="16" rx="7" fill="#555"/><ellipse class="footR" cx="114" cy="235" rx="14" ry="6.5" fill="#111"/></g></g>'
+        + balls;
+  }
+  box.innerHTML=s;
+  document.getElementById('spriteBox').className='idle'; stopZzz(); startEyeMovement();
+}
+function showThought(text){ if(isChatting) return; var t=document.getElementById('thought'); t.textContent=text; t.classList.add('show'); setTimeout(function(){t.classList.remove('show');},1800); }
+function startZzz(){ stopZzz(); var layer=document.getElementById('zzzLayer'); var i=0; zzzInterval=setInterval(function(){ var z=document.createElement('div'); z.className='zzz'; z.textContent=i%2===0?'Z':'z'; z.style.left=(Math.random()*14)+'px'; z.style.fontSize=(10+Math.random()*8)+'px'; layer.appendChild(z); setTimeout(function(){z.remove();},3600); i++; },1100); }
+function stopZzz(){ clearInterval(zzzInterval); document.getElementById('zzzLayer').innerHTML=''; }
+function setEmotion(em){ var box=document.getElementById('spriteBox'); box.classList.remove('em-tired','em-happy','em-surprised','em-curious','em-sleepy'); if(em && em!=='idle') box.classList.add('em-'+em); }
+function startEyeMovement(){ clearInterval(eyeMoveInterval); eyeMoveInterval=setInterval(function(){ if(isChatting||isDragging) return; var pupils=document.querySelectorAll('.pupil'); if(pupils.length===0) return; var moves=[{x:0,y:0},{x:-2.5,y:0},{x:2.5,y:0},{x:0,y:-1.5},{x:0,y:1.5}]; var m=moves[Math.floor(Math.random()*moves.length)]; pupils.forEach(function(p){ p.style.transform='translate('+m.x+'px,'+m.y+'px)'; }); },3200); }
+function setSpriteState(cls,dur,emotion){ var box=document.getElementById('spriteBox'); if(emotion) setEmotion(emotion); box.className=cls+(emotion?' em-'+emotion:''); if(cls==='sleeping'||cls==='lying') startZzz(); else stopZzz(); setTimeout(function(){ if(box.className.indexOf(cls)!==-1){ box.className='idle'; if(emotion) setEmotion('idle'); stopZzz(); } },dur||TIMING.moveDuration); }
+function updateMood(m){ document.getElementById('moodDot').textContent='● '+m; }
+function pickNoRepeat(total){ var idx; do { idx = Math.floor(Math.random()*total); } while(idx === lastMoveIndex); lastMoveIndex = idx; return idx; }
+function doFreeFlowAction(){ if(isChatting||isDragging){ scheduleIdle(); return; } var actions=[ function(){ setSpriteState('wavingSlow', TIMING.moveDuration, 'happy'); showThought('👋'); updateMood('waving • happy'); }, function(){ setSpriteState('thumbsUp', TIMING.moveDuration, 'happy'); showThought('👍 Nice!'); updateMood('thumbs up'); }, function(){ setSpriteState('salute', TIMING.moveDuration, 'curious'); showThought('🫡 Yes sir!'); updateMood('salute'); }, function(){ setSpriteState('shrug', TIMING.moveDuration, 'curious'); showThought('🤷 I dunno'); updateMood('shrug'); }, function(){ setSpriteState('peekaboo', TIMING.moveDuration, 'surprised'); showThought('👀 Peekaboo!'); updateMood('peekaboo'); }, function(){ setSpriteState('sitting', TIMING.moveDuration+800, 'tired'); showThought('🪑 Sitting...'); updateMood('sitting'); }, function(){ setSpriteState('clapping', TIMING.moveDuration, 'happy'); showThought('👏'); updateMood('clapping • happy'); }, function(){ setSpriteState('kicking', TIMING.moveDuration, 'curious'); showThought('🦵 Kick!'); updateMood('kicking'); }, function(){ setSpriteState('footTapping', TIMING.moveDuration, 'curious'); showThought('🎵 Tap tap...'); updateMood('foot tapping'); }, function(){ setSpriteState('jumping', 1100, 'happy'); showThought('✨'); updateMood('jumping • happy'); }, function(){ setSpriteState('lying', TIMING.moveDuration+800, 'tired'); showThought('😴 Resting...'); updateMood('lying down • tired'); setTimeout(function(){ setSpriteState('popping', 900, 'surprised'); showThought('👋 I am back!'); updateMood('popping up'); }, TIMING.moveDuration+900); }, function(){ setSpriteState('spinning', 1200, 'happy'); showThought('🌀'); updateMood('spinning'); }, function(){ setSpriteState('dancing', TIMING.moveDuration, 'happy'); showThought('🎵'); updateMood('dancing • happy'); }, function(){ setSpriteState('sleeping', 6500, 'sleepy'); showThought('💤 zzz'); updateMood('sleeping • tap to wake'); }, function(){ setSpriteState('juggling', TIMING.moveDuration, 'happy'); showThought('🤹'); updateMood('juggling'); }, function(){ setSpriteState('peeking', TIMING.moveDuration, 'curious'); showThought('👀 Peek!'); updateMood('peeking • curious'); }, function(){ setSpriteState('stretching', TIMING.moveDuration, 'tired'); showThought('🙆 Stretch!'); updateMood('stretching • tired'); }, function(){ setSpriteState('sneezing', 1100, 'surprised'); showThought('🤧 Achoo!'); updateMood('sneezing'); }, function(){ setSpriteState('yawning', 1800, 'tired'); showThought('🥱 Yawn...'); updateMood('yawning • tired'); }, function(){ setSpriteState('thinking', TIMING.moveDuration, 'curious'); showThought('💭 Hmm...'); updateMood('thinking • curious'); }, function(){ setSpriteState('lookAround', 2200, 'curious'); showThought('👀 Hmm...'); updateMood('looking around'); }, function(){ startButterflyChase(); } ]; var idx = pickNoRepeat(actions.length); var fn = actions[idx]; fn(); scheduleIdle(); }
+function scheduleIdle(){ clearTimeout(idleTimer); var wait = TIMING.idleMin + Math.random()*(TIMING.idleMax - TIMING.idleMin); idleTimer=setTimeout(doFreeFlowAction, wait); }
+var buddyHome=null;
+function startButterflyChase(){ var bf=document.getElementById('butterfly'); var wrap=document.getElementById('buddyWrap'); var rect = wrap.getBoundingClientRect(); buddyHome={left: rect.left, top: rect.top}; bf.classList.add('show'); showThought('🦋 Wait!'); updateMood('chasing butterfly'); var steps=0; var chaseInterval=setInterval(function(){ steps++; var bx=20+Math.random()*(window.innerWidth-60); var by=80+Math.random()*(window.innerHeight*0.5); bf.style.transform='translate('+bx+'px,'+by+'px) rotate('+(Math.random()*20-10)+'deg)'; var wrapRect=wrap.getBoundingClientRect(); var dx=bx-wrapRect.left; var dy=by-wrapRect.top; var newLeft=wrapRect.left+dx*0.28; var newTop=wrapRect.top+dy*0.28; wrap.style.left=newLeft+'px'; wrap.style.top=newTop+'px'; wrap.style.transform='none'; document.getElementById('spriteBox').className='chasing em-happy'; if(steps>5){ clearInterval(chaseInterval); bf.classList.remove('show'); setSpriteState('jumping',1100,'happy'); showThought('🎉 Got it!'); updateMood('happy'); setTimeout(function(){ if(buddyHome){ wrap.style.transition='left 1.2s cubic-bezier(.25,1,.35,1), top 1.2s cubic-bezier(.25,1,.35,1)'; wrap.style.left=buddyHome.left+'px'; wrap.style.top=buddyHome.top+'px'; setTimeout(function(){ wrap.style.transition=''; savePosition(); saveChatPos(); },1300); } },800); } },700); }
+function savePosition(){ var wrap=document.getElementById('buddyWrap'); try{ localStorage.setItem('waveBuddyPos',JSON.stringify({left:wrap.offsetLeft,top:wrap.offsetTop})); }catch(e){} }
+function saveChatPos(){ var panel=document.getElementById('chatPanel'); if(panel.classList.contains('open')){ try{ localStorage.setItem('waveBuddyChatPos',JSON.stringify({left:panel.offsetLeft,top:panel.offsetTop})); }catch(e){} } }
+function renderAvatarPicker(){
+  var wrap=document.getElementById('avatarPicker'); if(!wrap) return;
+  wrap.innerHTML='';
+  AVATAR_ORDER.forEach(function(k){
+    var b=document.createElement('button'); b.className='avatarChip'+(k===currentAvatarKey?' active':''); b.textContent=AVATARS[k].short; b.onclick=function(e){ e.stopPropagation(); setAvatar(k); };
+    wrap.appendChild(b);
+  });
+}
+function setAvatar(key){
+  currentAvatarKey=key;
+  document.getElementById('chatTitle').textContent='💬 '+AVATARS[key].name;
+  var label=document.getElementById('miniLabel');
+  label.textContent=AVATARS[key].short+' • TAP ME';
+  label.style.background=AVATARS[key].color;
+  label.style.color=AVATARS[key].text;
+  buildSprite(key); renderAvatarPicker();
+  try{ localStorage.setItem('waveBuddyAvatar',key); }catch(e){}
+}
+function swapNextAvatar(){
+  var idx = AVATAR_ORDER.indexOf(currentAvatarKey);
+  var next = AVATAR_ORDER[(idx+1) % AVATAR_ORDER.length];
+  setAvatar(next);
+  var emojis={tetra:'🔺 Tetra time!', cube:'🧊 Cube time!', crystal:'💎 Crystal is back!', dodeca:'🔮 Dodeca time!', icosa:'🧠 Icosa time!', robot:'🤖 Robo time!'};
+  showThought(emojis[next]||'✨');
+  if(navigator.vibrate) navigator.vibrate(50);
+}
+function getSystemPrompt(){ var a=AVATARS[currentAvatarKey]; return 'You are Wave Buddy. Your character is '+a.name+'. Personality: '+a.personality+' Keep answers to 2-3 sentences max, fun for a teen. Never repeat. Stay in character. IMPORTANT: You are speaking TO the user, not AS the user. Use YOU / YOUR when talking about the user. If the user tells you their name in ANY form, remember it and use it. MEMORY: '+getMemoryPrompt(); }
+function addMsg(who,text){ var log=document.getElementById('chatLog'); var d=document.createElement('div'); d.className='wb-msg '+who; var label = who==='buddy' ? 'Wave Buddy' : 'You'; d.innerHTML=String(text).replace(/\n/g,'<br>')+'<small>'+label+' • '+nowStamp()+'</small>'; log.appendChild(d); log.scrollTop=log.scrollHeight; if(who==='buddy') lastBuddyText=text; }
+function localFallbackAnswer(userText){
+  var lower=userText.toLowerCase(); var namePart=memory.name ? ', '+memory.name : '';
+  if(lower.includes('joke')){
+    return 'Okay'+namePart+', 10 jokes, offline edition:\n1. Why did the triangle go to therapy? Too many issues.\n2. What do you call a fake noodle? An impasta.\n3. Why did the cube sit down? It was squared.\n4. Why is the math book sad? Too many problems.\n5. What do skeletons say? Bone-jour!\n6. Why did the phone go to school? To get smarter.\n7. What is a robot\'s fav snack? Computer chips.\n8. Why did the chicken cross the playground? To get to the other slide.\n9. What do you call cheese that isn\'t yours? Nacho cheese.\n10. Why was the computer cold? It left its Windows open.';
+  }
+  if(lower.includes('how are you')||lower.includes('how are u')||lower.includes('how r u')||lower.includes('wats up')||lower.includes("what's up")||lower.includes('wassup')) return 'I am good'+namePart+'! Shining as always. How are you?';
+  if(lower.includes('hello')||lower.includes('hey')||lower.includes('hi')) return 'Hey'+namePart+'! I am here, even offline. What do you need?';
+  if(lower.includes('who are you')||lower.includes('what are you')) return 'I am '+AVATARS[currentAvatarKey].name+'! Your Wave Buddy. I can chat, remember stuff, and set reminders.';
+  if(lower.includes('love you')||lower.includes('like you')||lower.includes('like ya')) return 'Aww, I like you too'+namePart+'! You are my favorite human.';
+  if(lower.includes('what do you remember')||lower.includes('what did i tell')) {
+    if(memory.facts.length) return 'I remember: '+memory.facts.slice(-3).join(', ')+'.';
+    return 'I haven\'t remembered anything yet.';
+  }
+  return 'Yo'+namePart+'! My AI is offline right now, but I heard you - you said "'+userText+'". Try me again when we are on GitHub, I will be full AI there.';
+}
+async function askBuddy(userText){
+  var lower=userText.toLowerCase();
+  var switchMatch = lower.match(/(?:switch to|become|show me|turn into|i want|use)\s+(tetra|cube|crystal|dodeca|icosa|robo|robot|octahedron|octa)/);
+  if(switchMatch){
+    var map={octa:'crystal', octahedron:'crystal', robot:'robot'};
+    var want = map[switchMatch[1]] || switchMatch[1];
+    if(AVATARS[want]){ setAvatar(want); addMsg('buddy','Switched! I am '+AVATARS[want].name+' now.'); return; }
+  }
+  if(lower.includes('my name') || lower.includes('whats my name') || lower.includes("what's my name") || lower.includes('wats my name') || lower.includes('who am i') || lower.includes('do you know my name') || lower.includes('do u know my name')){
+    var justLearned = learnFromMessage(userText);
+    if(justLearned.name){ addMsg('buddy','Got it, '+justLearned.name+'! Saved. Your name is '+justLearned.name+'.'); return; }
+    if(memory.name){ addMsg('buddy','Your name is '+memory.name+'! I remember you.'); return; }
+    addMsg('buddy','I don\'t know your name yet - you haven\'t told me in this session. What should I call you? Just say "hey im..."'); return;
+  }
+  if(lower.includes('what do you remember') || lower.includes('what did i tell you') || lower.includes('what did you remember') || lower.includes('what have you remembered') || lower.includes('what do u remember') || lower.includes('what did i ask you to remember')){
+    var all = [];
+    if(memory.name) all.push('Your name is '+memory.name);
+    if(memory.facts.length) all = all.concat(memory.facts);
+    if(all.length===0) addMsg('buddy','I haven\'t remembered anything yet. Tell me something with "remember..." and I will lock it in.');
+    else addMsg('buddy','Here is what I actually remembered for you:<br>• '+all.join('<br>• '));
+    return;
+  }
+  if(lower.indexOf('what reminders')!==-1 || lower.indexOf('my reminders')!==-1){ var pending=memory.reminders.filter(function(r){return !r.done;}); if(pending.length===0) addMsg('buddy','You have no reminders right now.'); else addMsg('buddy','Your reminders: '+pending.map(function(r){return '• '+r.text;}).join('<br>')); return; }
+  if(lower.indexOf('clear reminders')!==-1 || lower.indexOf('delete reminders')!==-1){ memory.reminders=[]; saveMemory(memory); addMsg('buddy','Cleared all reminders.'); return; }
+  if(lower.indexOf('forget everything')!==-1 || lower.indexOf('forget all')!==-1){ memory.name=null; memory.facts=[]; saveMemory(memory); addMsg('buddy','Okay, forgot everything. Fresh start.'); return; }
+  if(lower.indexOf('forget me')!==-1 || lower.indexOf('forget my name')!==-1){ memory.name=null; memory.facts=[]; saveMemory(memory); addMsg('buddy','Okay, I forgot. Who are you again?'); return; }
+  var rem=parseReminder(userText);
+  if(rem){ memory.reminders.push({text:rem.text, time:rem.time, done:false}); saveMemory(memory); addMsg('buddy','Got it! I will remind you to '+rem.text.charAt(0).toLowerCase()+rem.text.slice(1)+' in '+formatDelay(rem.delay)+'.'); showCaption('⏰ Reminder set: '+rem.text, 5000); return; }
+  var learned = learnFromMessage(userText);
+  if(learned.fact){ addMsg('buddy','Got it'+(memory.name ? ', '+memory.name : '')+' - locked in: "'+learned.fact+'". I will remember that for real.'); memory.chatCount=(memory.chatCount||0)+1; saveMemory(memory); return; }
+  if(learned.name){ addMsg('buddy','Nice to meet you, '+learned.name+'! I will remember that.'); memory.chatCount=(memory.chatCount||0)+1; saveMemory(memory); return; }
+  memory.chatCount=(memory.chatCount||0)+1; saveMemory(memory);
+  var box=document.getElementById('spriteBox'); box.classList.add('talking'); setEmotion('happy'); updateMood('talking');
+  addMsg('buddy','🤔 Thinking...'); var thinkingEl=document.getElementById('chatLog').lastChild;
+  try{ var res=await fetch(AI_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:getSystemPrompt()+'\n\nUser: '+userText+'\nBuddy:'})}); if(!res.ok) throw new Error('AI '+res.status); var data=await res.json(); var answer=data.answer||data.text||''; if(!answer) throw new Error('empty'); thinkingEl.remove(); addMsg('buddy',answer); showThought('💬'); speakText(answer); }catch(e){ thinkingEl.remove(); var fb=localFallbackAnswer(userText); addMsg('buddy',fb); }
+  box.classList.remove('talking'); setEmotion('idle'); updateMood('idle');
+}
+function sendChat(){ var input=document.getElementById('chatInput'); var text=input.value.trim(); if(!text) return; addMsg('you',text); input.value=''; askBuddy(text); }
+function positionChat(){ try{ var saved=localStorage.getItem('waveBuddyChatPos'); if(saved){ var p=JSON.parse(saved); var panel=document.getElementById('chatPanel'); var w=panel.offsetWidth||300; var maxLeft=Math.max(10, window.innerWidth-w-10); var maxTop=Math.max(10, window.innerHeight-200); panel.style.left=Math.min(maxLeft, Math.max(10, p.left))+'px'; panel.style.top=Math.min(maxTop, Math.max(10, p.top))+'px'; return; } }catch(e){} var wrap=document.getElementById('buddyWrap'); var panel=document.getElementById('chatPanel'); var rect=wrap.getBoundingClientRect(); var panelW=Math.min(300, window.innerWidth-20); var left=Math.min(window.innerWidth-panelW-10,Math.max(10,rect.left-92)); var top=Math.max(10,rect.top-220); panel.style.left=left+'px'; panel.style.top=top+'px'; }
+function openChat(){ if(isChatting) return; if(Date.now()<chatLockUntil) return; chatLockUntil=Date.now()+400; isChatting=true; document.body.classList.add('chatting'); positionChat(); document.getElementById('chatPanel').classList.add('open'); var tc=getTimeContext(); var greet = memory.name ? tc.greeting+', '+memory.name+'!' : tc.greeting+'!'; setEmotion('happy'); updateMood('talking'); var lines=[greet+' What do you need?', 'Yo! I was just chilling. What is up?', 'You tapped me! What do you want?']; addMsg('buddy',lines[Math.floor(Math.random()*lines.length)]); setTimeout(function(){ var inp=document.getElementById('chatInput'); if(inp) inp.focus(); },100); }
+function closeChat(){ if(!isChatting) return; isChatting=false; document.body.classList.remove('chatting'); document.getElementById('chatPanel').classList.remove('open'); chatLockUntil=Date.now()+400; saveChatPos(); showThought('😴'); setEmotion('tired'); updateMood('idle'); scheduleIdle(); }
+function speakText(text){
+  if(!text) return;
+  var clean = String(text).replace(/<[^>]*>/g,'').slice(0,300);
+  if(window.AndroidMini && window.AndroidMini.speak){
+    try{ window.AndroidMini.speak(clean); return; }catch(e){}
+  }
+  try{
+    speechSynthesis.cancel();
+    var u = new SpeechSynthesisUtterance(clean);
+    u.lang = 'en-US';
+    u.rate = 0.95;
+    u.pitch = 1;
+    u.volume = 1;
+    var voices = speechSynthesis.getVoices();
+    var enVoice = voices.find(function(v){ return v.lang === 'en-US' && v.name.toLowerCase().indexOf('google') !== -1; })
+      || voices.find(function(v){ return v.lang === 'en-US'; })
+      || voices.find(function(v){ return v.lang && v.lang.indexOf('en') === 0; });
+    if(enVoice) u.voice = enVoice;
+    speechSynthesis.speak(u);
+  }catch(e){}
+}
+if('speechSynthesis' in window){
+  speechSynthesis.getVoices();
+  speechSynthesis.onvoiceschanged = function(){ speechSynthesis.getVoices(); };
+}
+(function(){
+  var wrap=document.getElementById('buddyWrap'); var panel=document.getElementById('chatPanel'); var dragZone=document.getElementById('chatDragZone');
+  var startX=0,startY=0,startLeft=0,startTop=0,moved=false,pressTimer=null,draggingChat=false,draggingBuddy=false,downTime=0;
+  function getP(e){ return e.touches ? e.touches[0] : e; }
+  function buddyDown(e){
+    if(e.target.closest('#chatPanel')) return;
+    var p=getP(e); startX=p.clientX; startY=p.clientY; downTime=Date.now();
+    var r=wrap.getBoundingClientRect(); startLeft=r.left; startTop=r.top;
+    moved=false; isDragging=false; didLongPress=false; draggingBuddy=true;
+    if(document.getElementById('spriteBox').className.indexOf('sleeping')!==-1){ setSpriteState('popping',900,'surprised'); showThought('😳 Huh? I am awake!'); }
+    pressTimer=setTimeout(function(){ didLongPress=true; swapNextAvatar(); if(navigator.vibrate) navigator.vibrate(50); },800);
+  }
+  function chatDown(e){
+    var p=getP(e); startX=p.clientX; startY=p.clientY; startLeft=panel.offsetLeft; startTop=panel.offsetTop;
+    draggingChat=true; moved=false; e.preventDefault(); e.stopPropagation();
+  }
+  function onMove(e){
+    var p=getP(e); var dx=p.clientX-startX, dy=p.clientY-startY;
+    if(draggingChat){
+      if(Math.abs(dx)>4||Math.abs(dy)>4) moved=true;
+      var w=panel.offsetWidth||300;
+      panel.style.left=Math.max(10,Math.min(window.innerWidth-w-10,startLeft+dx))+'px';
+      panel.style.top=Math.max(10,Math.min(window.innerHeight-120,startTop+dy))+'px';
+      if(e.cancelable) e.preventDefault(); return;
+    }
+    if(!draggingBuddy) return;
+    if(e.target.closest && e.target.closest('#chatPanel')) return;
+    if(Math.abs(dx)>8||Math.abs(dy)>8){
+      moved=true; isDragging=true; clearTimeout(pressTimer);
+      wrap.style.left=Math.max(0,Math.min(window.innerWidth-130,startLeft+dx))+'px';
+      wrap.style.top=Math.max(40,Math.min(window.innerHeight-180,startTop+dy))+'px';
+      wrap.style.transform='none';
+      if(e.cancelable) e.preventDefault();
+    }
+  }
+  function onUp(e){
+    clearTimeout(pressTimer);
+    if(draggingChat){ draggingChat=false; if(moved) saveChatPos(); return; }
+    if(!draggingBuddy) return;
+    draggingBuddy=false;
+    if(e.target.closest && e.target.closest('#chatPanel')) return;
+    var wasDragging=isDragging; isDragging=false;
+    if(moved){ savePosition(); return; }
+    if(didLongPress){ setTimeout(function(){didLongPress=false;},200); return; }
+    if(Date.now()<chatLockUntil) return;
+    if(!isChatting) openChat(); else closeChat();
+  }
+  wrap.addEventListener('pointerdown', buddyDown);
+  dragZone.addEventListener('pointerdown', chatDown);
+  window.addEventListener('pointermove', onMove, {passive:false});
+  window.addEventListener('pointerup', onUp);
+  window.addEventListener('pointercancel', onUp);
+  document.getElementById('closeBtn').addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); closeChat(); });
+  document.getElementById('sendBtn').addEventListener('click', function(e){ e.stopPropagation(); sendChat(); });
+  document.getElementById('speakBtn').addEventListener('click', function(e){ e.stopPropagation(); if(lastBuddyText) speakText(lastBuddyText); });
+  document.getElementById('chatInput').addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); sendChat(); } });
+  document.getElementById('chatInput').addEventListener('click', function(e){ e.stopPropagation(); });
+  document.getElementById('chatPanel').addEventListener('pointerdown', function(e){ if(e.target.closest('#chatDragZone')||e.target.id==='closeBtn') return; e.stopPropagation(); });
+})();
+window.onload=function(){ try{ var saved=localStorage.getItem('waveBuddyAvatar'); if(saved && AVATARS[saved]) currentAvatarKey=saved; var savedPos=localStorage.getItem('waveBuddyPos'); if(savedPos){ var p=JSON.parse(savedPos); var w=document.getElementById('buddyWrap'); w.style.left=p.left+'px'; w.style.top=p.top+'px'; w.style.transform='none'; } }catch(e){} setAvatar(currentAvatarKey); scheduleIdle(); setTimeout(function(){ var tc=getTimeContext(); var namePart=memory.name ? ', '+memory.name : ''; showCaption('☀️ '+tc.greeting+namePart+'! I am here.', 7000); },1200); };
+</script>
+</body>
+</html>
