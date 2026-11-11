@@ -20,28 +20,17 @@ exports.handler = async (event) => {
   }
 
   let body = {};
-  try {
-    body = JSON.parse(event.body || "{}");
-  } catch (e) {
-    body = {};
-  }
+  try { body = JSON.parse(event.body || "{}"); } catch (e) { body = {}; }
 
-  const messages = body.messages || [];
-  const userMessage = body.message || "";
+  // Accept ALL formats the website might send
+  let userContent = "";
+  if (body.prompt) userContent = body.prompt;
+  else if (body.message) userContent = body.message;
+  else if (body.messages && body.messages.length > 0) userContent = body.messages[body.messages.length - 1].content;
 
-  let finalMessages = messages;
-  if (messages.length === 0 && userMessage) {
-    finalMessages = [{ role: "user", content: userMessage }];
-  }
-
-  if (finalMessages.length === 0) {
+  if (!userContent) {
     return { statusCode: 400, headers, body: JSON.stringify({ error: "No message provided" }) };
   }
-
-  const systemPrompt = {
-    role: "system",
-    content: "You are Wave Buddy, a friendly AI assistant for friends. Be fun, helpful, and concise. Keep answers short and warm."
-  };
 
   try {
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -52,21 +41,21 @@ exports.handler = async (event) => {
       },
       body: JSON.stringify({
         model: "llama-3.3-70b-versatile",
-        messages: [systemPrompt, ...finalMessages],
+        messages: [{ role: "user", content: userContent }],
         temperature: 0.7,
         max_tokens: 500
       })
     });
 
     const data = await response.json();
-
     if (!response.ok) {
       return { statusCode: response.status, headers, body: JSON.stringify({ error: "Groq API error", details: data }) };
     }
 
     const reply = data.choices && data.choices[0] && data.choices[0].message ? data.choices[0].message.content : "Sorry, I got no reply.";
 
-    return { statusCode: 200, headers, body: JSON.stringify({ reply: reply }) };
+    // Return ALL field names so the website finds it no matter what
+    return { statusCode: 200, headers, body: JSON.stringify({ reply: reply, answer: reply, text: reply }) };
 
   } catch (err) {
     return { statusCode: 500, headers, body: JSON.stringify({ error: err.message }) };
