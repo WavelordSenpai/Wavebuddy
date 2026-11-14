@@ -1,120 +1,193 @@
 package com.wavelord.wavebuddy;
 
-import android.app.Activity;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.Service;
 import android.content.Intent;
-import android.net.Uri;
-import android.os.Bundle;
-import android.provider.Settings;
+import android.graphics.Color;
+import android.graphics.PixelFormat;
+import android.os.Build;
+import android.os.IBinder;
+import android.view.Gravity;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.WindowManager;
 import android.webkit.JavascriptInterface;
+import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.webkit.WebResourceRequest;
+import android.widget.FrameLayout;
+import android.speech.tts.TextToSpeech;
+import java.util.Locale;
 
-public class MainActivity extends Activity {
+public class FloatingBuddy extends Service {
+    private WindowManager windowManager;
+    private View floatingView;
+    private WindowManager.LayoutParams params;
     private WebView web;
+    private TextToSpeech tts;
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+    public IBinder onBind(Intent intent) {
+        return null;
+    }
 
-        // FIX - FULLSCREEN, kill that white/blue bar at top
-        getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
-        getWindow().setNavigationBarColor(android.graphics.Color.BLACK);
-        getWindow().getDecorView().setSystemUiVisibility(
-            android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-            | android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-            | android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-            | android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-        );
-        // This stops the window from resizing / leaving a white gap when keyboard opens
-        getWindow().setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN);
+    @Override
+    public void onCreate() {
+        super.onCreate();
 
-        // Ask for overlay permission FIRST, or minimize will never work
-        if (!Settings.canDrawOverlays(this)) {
-            Intent perm = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                Uri.parse("package:" + getPackageName()));
-            startActivityForResult(perm, 123);
+        // Foreground notification - required on Android 12+ or service gets killed
+        String channelId = "wavebuddy_floating";
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel ch = new NotificationChannel(channelId, "WaveBuddy", NotificationManager.IMPORTANCE_LOW);
+            NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+            if (nm != null) nm.createNotificationChannel(ch);
         }
+        Notification notif;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            notif = new Notification.Builder(this, channelId)
+                .setContentTitle("WaveBuddy is running")
+                .setContentText("Tap to expand")
+                .setSmallIcon(android.R.drawable.sym_def_app_icon)
+                .build();
+        } else {
+            notif = new Notification.Builder(this)
+                .setContentTitle("WaveBuddy is running")
+                .setContentText("Tap to expand")
+                .setSmallIcon(android.R.drawable.sym_def_app_icon)
+                .build();
+        }
+        try { startForeground(1, notif); } catch (Exception ignored) {}
 
+        windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
+
+        FrameLayout frame = new FrameLayout(this);
         web = new WebView(this);
-        web.setBackgroundColor(android.graphics.Color.BLACK); // FIX - no white flash
-        WebSettings s = web.getSettings();
-        s.setJavaScriptEnabled(true);
-        s.setDomStorageEnabled(true);
-        s.setAllowFileAccess(true);
-        s.setAllowContentAccess(true);
-        s.setMediaPlaybackRequiresUserGesture(false);
+        WebSettings ws = web.getSettings();
+        ws.setJavaScriptEnabled(true);
+        ws.setDomStorageEnabled(true);
+        ws.setAllowFileAccess(true);
+        ws.setAllowContentAccess(true);
+        ws.setMediaPlaybackRequiresUserGesture(false);
+        web.setBackgroundColor(Color.TRANSPARENT);
+        web.setClickable(true);
+        web.setFocusable(true);
+        web.setFocusableInTouchMode(true);
 
-        // FIXED BRIDGE - this is what index.html now calls, no more location.href crash
+        // FIXED - AndroidMini bridge (same name as MainActivity)
         web.addJavascriptInterface(new Object(){
             @JavascriptInterface
             public void minimize(){
-                runOnUiThread(() -> {
-                    try { startForegroundService(new Intent(MainActivity.this, FloatingBuddy.class)); } catch(Exception e){ try{ startService(new Intent(MainActivity.this, FloatingBuddy.class)); }catch(Exception ignored){} }
-                    // DON'T finish() - just go to background so FULL APP can come back
-                    moveTaskToBack(true);
-                });
+                if(web != null) web.post(() -> web.evaluateJavascript("document.body.classList.add('mini-mode')", null));
             }
             @JavascriptInterface
             public void expand(){
-                runOnUiThread(() -> {
-                    // Already in full app, just ensure we are front
-                    Intent i = new Intent(MainActivity.this, MainActivity.class);
-                    i.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-                    startActivity(i);
-                });
+                Intent i = new Intent(FloatingBuddy.this, MainActivity.class);
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                startActivity(i);
+                stopSelf();
             }
             @JavascriptInterface
             public void speak(String text){
-                // TTS handled in JS fallback, keep stub so it doesn't crash
+                if(text == null) return;
+                try{
+                    if(tts == null){
+                        tts = new TextToSpeech(FloatingBuddy.this, status -> {
+                            if(status == TextToSpeech.SUCCESS){
+                                tts.setLanguage(Locale.US);
+                                tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "buddy");
+                            }
+                        });
+                    } else {
+                        tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "buddy");
+                    }
+                }catch(Exception ignored){}
             }
         }, "AndroidMini");
 
         web.setWebViewClient(new WebViewClient(){
-            // Old API (your old code only had this, Android 12+ ignores it)
             @Override public boolean shouldOverrideUrlLoading(WebView v, String url){
-                return handleWaveBuddyUrl(url);
+                return handleUrl(url);
             }
-            // New API - THIS is the one that actually runs now
             @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest request){
-                return handleWaveBuddyUrl(request.getUrl().toString());
+                return handleUrl(request.getUrl().toString());
             }
-            private boolean handleWaveBuddyUrl(String url){
+            private boolean handleUrl(String url){
                 if(url == null) return false;
-                if(url.startsWith("wavebuddy://minimize")){
-                    try { startForegroundService(new Intent(MainActivity.this, FloatingBuddy.class)); } catch(Exception e){ try{ startService(new Intent(MainActivity.this, FloatingBuddy.class)); }catch(Exception ignored){} }
-                    moveTaskToBack(true);
+                if(url.startsWith("wavebuddy://expand")){
+                    Intent i = new Intent(FloatingBuddy.this, MainActivity.class);
+                    i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                    startActivity(i);
+                    stopSelf();
                     return true;
                 }
-                if(url.startsWith("wavebuddy://expand")){
-                    return false;
+                if(url.startsWith("wavebuddy://minimize")){
+                    return true;
                 }
                 return false;
             }
         });
+
         web.loadUrl("file:///android_asset/public/index.html");
-        setContentView(web);
-    }
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        // User came back from permission screen, nothing to do - they can tap MINIMIZE now
-    }
+        FrameLayout.LayoutParams webParams = new FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.MATCH_PARENT);
+        frame.addView(web, webParams);
+        floatingView = frame;
 
-    @Override
-    protected void onNewIntent(Intent intent){
-        super.onNewIntent(intent);
-        // When FloatingBuddy says EXPAND, we come back here
-        if(web != null){
-            web.evaluateJavascript("document.body.classList.remove('mini-mode')", null);
+        int type;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
+        } else {
+            type = WindowManager.LayoutParams.TYPE_PHONE;
         }
+
+        // FIX - NO FLAG_NOT_FOCUSABLE, so keyboard works in floating buddy
+        params = new WindowManager.LayoutParams(320, 420, type,
+            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+            PixelFormat.TRANSLUCENT);
+        params.gravity = Gravity.TOP | Gravity.START;
+        params.x = 0;
+        params.y = 100;
+
+        try { windowManager.addView(floatingView, params); } catch (Exception e) {}
+
+        // Drag to move
+        floatingView.setOnTouchListener(new View.OnTouchListener(){
+            private int initialX, initialY;
+            private float initialTouchX, initialTouchY;
+            @Override public boolean onTouch(View v, MotionEvent event){
+                switch(event.getAction()){
+                    case MotionEvent.ACTION_DOWN:
+                        initialX = params.x;
+                        initialY = params.y;
+                        initialTouchX = event.getRawX();
+                        initialTouchY = event.getRawY();
+                        return false;
+                    case MotionEvent.ACTION_MOVE:
+                        params.x = initialX + (int)(event.getRawX() - initialTouchX);
+                        params.y = initialY + (int)(event.getRawY() - initialTouchY);
+                        try { windowManager.updateViewLayout(floatingView, params); } catch(Exception ignored){}
+                        return true;
+                }
+                return false;
+            }
+        });
     }
 
     @Override
-    protected void onDestroy(){
-        super.onDestroy();
-        if(web != null){ web.destroy(); }
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        return START_STICKY;
     }
-}
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        try { if(tts != null){ tts.stop(); tts.shutdown(); } } catch(Exception ignored){}
+        try { if (floatingView != null && windowManager != null) windowManager.removeView(floatingView); } catch (Exception e) {}
+        try { if(web != null) web.destroy(); } catch(Exception ignored){}
+    }
+            }
