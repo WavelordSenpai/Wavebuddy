@@ -9,44 +9,32 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
-
-      - name: Install Capacitor
-        run: |
-          npm install
-          npm install @capacitor/core @capacitor/cli @capacitor/android
-
-      - name: Init Capacitor if needed
-        run: |
-          npx cap init "Wave Buddy" com.wavelord.wavebuddy --web-dir=. || true
-          npx cap add android || true
-          npx cap sync android
-
-      - name: Copy Icon
-        run: |
-          mkdir -p android/app/src/main/res/mipmap-xxxhdpi
-          cp icon.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png || echo "Add icon.png to repo root"
-
       - name: Build APK
         run: |
+          npm install
+          mkdir -p www
+          cp *.html www/ 2>/dev/null || true
+          cp *.css www/ 2>/dev/null || true
+          cp *.js www/ 2>/dev/null || true
+          cp *.json www/ 2>/dev/null || true
+          cp -r assets www/ 2>/dev/null || true
+          cp -r icons www/ 2>/dev/null || true
+          cp -r images www/ 2>/dev/null || true
+          npx cap init "Wave Buddy" com.wavelord.wavebuddy --web-dir=www || true
+          npx cap add android || true
+          npx cap sync android
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: wave-buddy-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
