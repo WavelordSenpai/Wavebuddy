@@ -16,7 +16,20 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+    super.onCreate(savedInstanceState);
+
+    // FIX - FULLSCREEN, kill that white/blue bar at top
+    getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
+    getWindow().setNavigationBarColor(android.graphics.Color.BLACK);
+    getWindow().getDecorView().setSystemUiVisibility(
+        android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+        | android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+        | android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+        | android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+    );
+    // This stops the window from resizing / leaving a white gap when keyboard opens
+    getWindow().setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN);
+    
 
         // Ask for overlay permission FIRST, or minimize will never work
         if (!Settings.canDrawOverlays(this)) {
@@ -25,7 +38,8 @@ public class MainActivity extends Activity {
             startActivityForResult(perm, 123);
         }
 
-        web = new WebView(this);
+                web = new WebView(this);
+        web.setBackgroundColor(android.graphics.Color.BLACK); // FIX - no white flash
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
