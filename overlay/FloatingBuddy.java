@@ -8,6 +8,7 @@ import android.widget.LinearLayout; import android.widget.TextView; import andro
 public class FloatingBuddy extends Service {
     private WindowManager wm; private View fv; private WindowManager.LayoutParams params; private WebView web; private TextToSpeech tts;
     private int initX, initY; private float downX, downY; private boolean dragging = false;
+    private int screenW = 1080;
     private void doSpeak(String t){
         if(t == null) return; String clean = t.replaceAll("<[^>]*>", "").replaceAll("\\s+", " ").trim(); if(clean.isEmpty()) return; if(clean.length()>250) clean = clean.substring(0,250); final String toSay = clean;
         try{
@@ -45,6 +46,20 @@ public class FloatingBuddy extends Service {
             @JavascriptInterface public void expand(){ openApp(); }
             @JavascriptInterface public void speak(String t){ doSpeak(t); }
             @JavascriptInterface public void testVoice(){ doSpeak("Hello! This is Wave Buddy. Can you hear me now?"); }
+            @JavascriptInterface public void moveWindow(int dx, int dy){
+                try{
+                    android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
+                    h.post(() -> {
+                        try{
+                            params.x += dx; params.y += dy;
+                            if(params.x < -220) params.x = -220;
+                            if(params.x > screenW - 100) params.x = screenW - 100;
+                            if(params.y < 0) params.y = 0;
+                            wm.updateViewLayout(fv, params);
+                        }catch(Exception ignored){}
+                    });
+                }catch(Exception ignored){}
+            }
         }, "AndroidMini");
         web.setWebViewClient(new WebViewClient(){
             @Override public boolean shouldOverrideUrlLoading(WebView v, String u){ return handle(u); }
@@ -56,7 +71,7 @@ public class FloatingBuddy extends Service {
         fv = root;
         int type = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_PHONE;
         DisplayMetrics dm = new DisplayMetrics(); try{ wm.getDefaultDisplay().getMetrics(dm); }catch(Exception ignored){}
-        int screenW = dm.widthPixels > 0 ? dm.widthPixels : 1080;
+        screenW = dm.widthPixels > 0 ? dm.widthPixels : 1080;
         int winW = 320; int winH = 620;
         int centerX = (screenW - winW) / 2; if(centerX < 0) centerX = 0;
         params = new WindowManager.LayoutParams(winW, winH, type, WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL, PixelFormat.TRANSLUCENT);
@@ -89,4 +104,4 @@ public class FloatingBuddy extends Service {
         try { if (fv != null && wm != null) wm.removeView(fv); } catch (Exception e) {}
         try { if(web != null) web.destroy(); } catch(Exception ignored){}
     }
-            }
+}
