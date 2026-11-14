@@ -180,10 +180,10 @@ body.chatting #hint{opacity:0!important}
       <button id="miniTalkBtn" onclick="onMiniTalk(event)">💬 AI TALK</button>
       <button id="miniHomeBtn" onclick="tryExpandFromDemo(event)">🏠 BACK HOME</button>
     </div>
-    <div id="miniChat">
+    <div id="miniChat" onclick="event.stopPropagation()">
       <div id="miniChatDrag">↕ DRAG ME • TAP X TO CLOSE</div>
       <div id="miniChatLog"><div class="wb-msg buddy">Hey! I'm here 💬</div></div>
-      <div id="miniChatRow"><input id="miniChatInput" placeholder="Talk to me..."><button id="miniChatSend" onclick="sendMiniChat()">Send</button></div>
+      <div id="miniChatRow"><input id="miniChatInput" placeholder="Talk to me..." onclick="event.stopPropagation()" onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()"><button id="miniChatSend" onclick="event.stopPropagation(); sendMiniChat()">Send</button></div>
     </div>
   </div>
   <div id="chatPanel">
@@ -203,7 +203,7 @@ if(IS_MINI){document.body.classList.add('overlay');document.body.classList.add('
 function isMiniMode(){return document.body.classList.contains('mini-mode')||IS_MINI;}
 function tryMinimize(e){if(e)e.stopPropagation();if(window.AndroidMini&&window.AndroidMini.minimize){try{window.AndroidMini.minimize();}catch(err){}}document.body.classList.add('mini-mode');var wrap=document.getElementById('buddyWrap');wrap.style.left='50%';wrap.style.top='140px';wrap.style.transform='translate(-50%,-50%)';var mo=document.getElementById('miniOptions');if(mo)mo.classList.remove('show');if(isChatting){try{closeChat();}catch(err){}}}
 function tryExpandFromDemo(e){if(e)e.stopPropagation();if(window.AndroidMini&&window.AndroidMini.expand){try{window.AndroidMini.expand();}catch(err){}}document.body.classList.remove('mini-mode');var wrap=document.getElementById('buddyWrap');wrap.style.left='50%';wrap.style.top='58%';wrap.style.transform='translate(-50%,-50%)';var mc=document.getElementById('miniChat');if(mc)mc.classList.remove('open');var mo=document.getElementById('miniOptions');if(mo)mo.classList.remove('show');}
-function onBuddyTap(e){if(e)e.stopPropagation();if(isMiniMode()){var mo=document.getElementById('miniOptions');if(!mo)return;var mc=document.getElementById('miniChat');if(mc&&mc.classList.contains('open')){mc.classList.remove('open');mo.classList.remove('show');return;}mo.classList.toggle('show');setTimeout(function(){if(mo)mo.classList.remove('show');},5000);return;}openChat();}
+function onBuddyTap(e){if(e)e.stopPropagation();if(e.target&&e.target.closest&&e.target.closest('#miniChat'))return;if(isMiniMode()){var mo=document.getElementById('miniOptions');if(!mo)return;var mc=document.getElementById('miniChat');if(mc&&mc.classList.contains('open')){return;}mo.classList.toggle('show');setTimeout(function(){if(mo)mo.classList.remove('show');},5000);return;}openChat();}
 function onMiniTalk(e){if(e)e.stopPropagation();var mo=document.getElementById('miniOptions');if(mo)mo.classList.remove('show');toggleMiniChat(e);}
 function loadMemory(){var m=null;try{m=JSON.parse(localStorage.getItem('waveBuddyMemory')||'null');}catch(e){}if(!m){try{m=JSON.parse(sessionStorage.getItem('waveBuddyMemory')||'null');}catch(e){}}if(!m&&window.__WB_MEMORY)m=window.__WB_MEMORY;if(!m)m={};return m;}
 function saveMemory(m){window.__WB_MEMORY=m;try{localStorage.setItem('waveBuddyMemory',JSON.stringify(m));}catch(e){}try{sessionStorage.setItem('waveBuddyMemory',JSON.stringify(m));}catch(e){}}
@@ -252,7 +252,7 @@ async function askBuddy(userText){var lower=userText.toLowerCase();if(lower.incl
 function sendChat(){var inp=document.getElementById('chatInput');var t=inp.value.trim();if(!t)return;addMsg('you',t);inp.value='';askBuddy(t);}
 function positionChat(){var p=document.getElementById('chatPanel');p.style.left='50%';p.style.top='50%';p.style.transform='translate(-50%,-50%)';}
 function toggleMiniChat(e){if(e)e.stopPropagation();var c=document.getElementById('miniChat');c.classList.toggle('open');if(c.classList.contains('open'))setTimeout(function(){var i=document.getElementById('miniChatInput');if(i)i.focus();},100);}
-function sendMiniChat(){var inp=document.getElementById('miniChatInput');var txt=inp.value.trim();if(!txt)return;var log=document.getElementById('miniChatLog');var you=document.createElement('div');you.className='wb-msg you';you.textContent=txt;log.appendChild(you);inp.value='';var before=document.getElementById('chatLog').children.length;askBuddy(txt);setTimeout(function(){var cl=document.getElementById('chatLog');for(var i=before;i<cl.children.length;i++){var b=document.createElement('div');b.className='wb-msg buddy';b.innerHTML=cl.children[i].innerHTML;log.appendChild(b);}log.scrollTop=log.scrollHeight;},1500);}
+function sendMiniChat(){var inp=document.getElementById('miniChatInput');var txt=inp.value.trim();if(!txt)return;var log=document.getElementById('miniChatLog');var you=document.createElement('div');you.className='wb-msg you';you.textContent=txt;log.appendChild(you);inp.value='';inp.focus();var before=document.getElementById('chatLog').children.length;askBuddy(txt);setTimeout(function(){var cl=document.getElementById('chatLog');for(var i=before;i<cl.children.length;i++){var b=document.createElement('div');b.className='wb-msg buddy';b.innerHTML=cl.children[i].innerHTML;log.appendChild(b);}log.scrollTop=log.scrollHeight;var ii=document.getElementById('miniChatInput');if(ii)ii.focus();},1500);}
 function openChat(){if(isMiniMode()){toggleMiniChat();return;}if(isChatting)return;if(Date.now()<chatLockUntil)return;chatLockUntil=Date.now()+400;isChatting=true;document.body.classList.add('chatting');positionChat();document.getElementById('chatPanel').classList.add('open');var tc=getTimeContext();var greet=memory.name?tc.greeting+', '+memory.name+'!':tc.greeting+'!';setEmotion('happy');var lines=[greet+' What do you need?','Yo! I was just chilling. What is up?','You tapped me! What do you want?'];addMsg('buddy',lines[Math.floor(Math.random()*lines.length)]);setTimeout(function(){var inp=document.getElementById('chatInput');if(inp)inp.focus();},100);}
 function closeChat(){if(!isChatting)return;isChatting=false;document.body.classList.remove('chatting');document.getElementById('chatPanel').classList.remove('open');chatLockUntil=Date.now()+400;showThought('😴');setEmotion('tired');scheduleIdle();}
 function testVoice(){if(window.AndroidMini&&window.AndroidMini.testVoice){try{window.AndroidMini.testVoice();return;}catch(e){}}speakText("Hello! This is Wave Buddy. Can you hear me now?");}
@@ -260,14 +260,16 @@ function speakText(text){var toSpeak=text||lastBuddyText||lastUserText||"Hello! 
 if('speechSynthesis' in window){speechSynthesis.getVoices();speechSynthesis.onvoiceschanged=function(){speechSynthesis.getVoices();};}
 (function(){
   var wrap=document.getElementById('buddyWrap');var panel=document.getElementById('chatPanel');var dragZone=document.getElementById('chatDragZone');var miniChatEl=document.getElementById('miniChat');var miniDrag=document.getElementById('miniChatDrag');
-  var startX=0,startY=0,startLeft=0,startTop=0,moved=false,pressTimer=null,draggingChat=false,draggingBuddy=false,draggingMini=false,downTime=0;
+  var startX=0,startY=0,startLeft=0,startTop=0,moved=false,pressTimer=null,draggingChat=false,draggingBuddy=false,draggingMini=false,downTime=0,lastMoveX=0,lastMoveY=0;
   function getP(e){return e.touches?e.touches[0]:e;}
   function buddyDown(e){
-    if(isMiniMode()) return;
-    if(e.target.closest('#chatPanel'))return;if(e.target.closest('#miniChat'))return;if(e.target.closest('#miniOptions'))return;if(e.target.closest('#landing'))return;
-    var p=getP(e);startX=p.clientX;startY=p.clientY;downTime=Date.now();var r=wrap.getBoundingClientRect();startLeft=r.left;startTop=r.top;moved=false;isDragging=false;didLongPress=false;draggingBuddy=true;
-    if(document.getElementById('spriteBox').className.indexOf('sleeping')!==-1){setSpriteState('popping',900,'surprised');showThought('😳 Awake!');}
-    pressTimer=setTimeout(function(){didLongPress=true;swapNextAvatar();if(navigator.vibrate)navigator.vibrate(50);},800);
+    if(e.target.closest&&e.target.closest('#miniChat'))return;
+    if(e.target.closest&&e.target.closest('#miniOptions'))return;
+    if(e.target.closest&&e.target.closest('#landing'))return;
+    if(e.target.closest&&e.target.closest('#chatPanel'))return;
+    var p=getP(e);startX=p.clientX;startY=p.clientY;lastMoveX=p.clientX;lastMoveY=p.clientY;downTime=Date.now();var r=wrap.getBoundingClientRect();startLeft=r.left;startTop=r.top;moved=false;isDragging=false;didLongPress=false;draggingBuddy=true;
+    if(!isMiniMode() && document.getElementById('spriteBox').className.indexOf('sleeping')!==-1){setSpriteState('popping',900,'surprised');showThought('😳 Awake!');}
+    if(!isMiniMode()){pressTimer=setTimeout(function(){didLongPress=true;swapNextAvatar();if(navigator.vibrate)navigator.vibrate(50);},800);}
   }
   function chatDown(e){var p=getP(e);startX=p.clientX;startY=p.clientY;startLeft=panel.offsetLeft;startTop=panel.offsetTop;draggingChat=true;moved=false;e.preventDefault();e.stopPropagation();}
   function miniDown(e){var p=getP(e);startX=p.clientX;startY=p.clientY;startLeft=miniChatEl.offsetLeft;startTop=miniChatEl.offsetTop;draggingMini=true;moved=false;e.preventDefault();e.stopPropagation();}
@@ -275,20 +277,33 @@ if('speechSynthesis' in window){speechSynthesis.getVoices();speechSynthesis.onvo
     var p=getP(e);var dx=p.clientX-startX,dy=p.clientY-startY;
     if(draggingChat){if(Math.abs(dx)>4||Math.abs(dy)>4)moved=true;panel.style.left=Math.max(10,Math.min(window.innerWidth-(panel.offsetWidth||300)-10,startLeft+dx))+'px';panel.style.top=Math.max(10,Math.min(window.innerHeight-120,startTop+dy))+'px';panel.style.transform='none';if(e.cancelable)e.preventDefault();return;}
     if(draggingMini){if(Math.abs(dx)>4||Math.abs(dy)>4)moved=true;miniChatEl.style.left=Math.max(0,Math.min(window.innerWidth-100,startLeft+dx))+'px';miniChatEl.style.top=Math.max(60,Math.min(window.innerHeight-80,startTop+dy))+'px';miniChatEl.style.transform='none';if(e.cancelable)e.preventDefault();return;}
-    if(isMiniMode()) return;
-    if(!draggingBuddy)return;if(Math.abs(dx)>6||Math.abs(dy)>6){moved=true;isDragging=true;clearTimeout(pressTimer);}if(moved){wrap.style.left=(startLeft+dx)+'px';wrap.style.top=(startTop+dy)+'px';wrap.style.transform='none';if(e.cancelable)e.preventDefault();}
+    if(!draggingBuddy)return;
+    if(Math.abs(dx)>6||Math.abs(dy)>6){moved=true;isDragging=true;clearTimeout(pressTimer);}
+    if(moved){
+      if(isMiniMode()){
+        var stepX=Math.round(p.clientX-lastMoveX);var stepY=Math.round(p.clientY-lastMoveY);
+        lastMoveX=p.clientX;lastMoveY=p.clientY;
+        if(window.AndroidMini&&window.AndroidMini.moveWindow){try{window.AndroidMini.moveWindow(stepX,stepY);}catch(err){}}
+        if(e.cancelable)e.preventDefault();
+      } else {
+        wrap.style.left=(startLeft+dx)+'px';wrap.style.top=(startTop+dy)+'px';wrap.style.transform='none';if(e.cancelable)e.preventDefault();
+      }
+    }
   }
-  function onUp(e){clearTimeout(pressTimer);if(draggingChat){draggingChat=false;return;}if(draggingMini){draggingMini=false;return;}if(draggingBuddy){draggingBuddy=false;isDragging=false;if(moved)savePosition();return;}}
+  function onUp(e){clearTimeout(pressTimer);if(draggingChat){draggingChat=false;return;}if(draggingMini){draggingMini=false;return;}if(draggingBuddy){draggingBuddy=false;isDragging=false;if(moved&&!isMiniMode())savePosition();return;}}
   wrap.addEventListener('touchstart',buddyDown,{passive:true});wrap.addEventListener('mousedown',buddyDown);
   document.addEventListener('touchmove',onMove,{passive:false});document.addEventListener('mousemove',onMove);
   document.addEventListener('touchend',onUp);document.addEventListener('mouseup',onUp);
   dragZone.addEventListener('touchstart',chatDown,{passive:false});dragZone.addEventListener('mousedown',chatDown);
   miniDrag.addEventListener('touchstart',miniDown,{passive:false});miniDrag.addEventListener('mousedown',miniDown);
+  miniChatEl.addEventListener('click',function(e){e.stopPropagation();});
+  miniChatEl.addEventListener('touchstart',function(e){e.stopPropagation();},{passive:true});
+  miniChatEl.addEventListener('mousedown',function(e){e.stopPropagation();});
   document.getElementById('closeBtn').onclick=function(e){e.stopPropagation();closeChat();};
   document.getElementById('sendBtn').onclick=function(){sendChat();};
   document.getElementById('speakBtn').onclick=function(e){if(e)e.stopPropagation();speakText();};
   document.getElementById('chatInput').addEventListener('keydown',function(e){if(e.key==='Enter')sendChat();});
-  document.getElementById('miniChatSend').onclick=function(){sendMiniChat();};
+  document.getElementById('miniChatSend').onclick=function(e){if(e)e.stopPropagation();sendMiniChat();};
   document.getElementById('miniChatInput').addEventListener('keydown',function(e){if(e.key==='Enter')sendMiniChat();});
 })();
 try{var sa=localStorage.getItem('waveBuddyAvatar');if(sa&&AVATARS[sa])currentAvatarKey=sa;}catch(e){}
