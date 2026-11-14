@@ -20,14 +20,11 @@ public class MainActivity extends Activity {
         web.setWebViewClient(new WebViewClient(){
             @Override public boolean shouldOverrideUrlLoading(WebView v, String url){
                 if(url.equals("wavebuddy://minimize")){
-                    try {
-                        Intent svc = new Intent(MainActivity.this, FloatingBuddy.class);
-                        // Android 12+ needs this, not startService()
-                        startForegroundService(svc);
-                    } catch (Exception e) {}
+                    try { startForegroundService(new Intent(MainActivity.this, FloatingBuddy.class)); } catch (Exception e) {}
                     finish();
                     return true;
                 }
+                if(url.equals("wavebuddy://expand")){ return false; }
                 return false;
             }
         });
