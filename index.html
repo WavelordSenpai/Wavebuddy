@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#0A0A0A">
-<title>Wave Buddy V3.5 FINAL</title>
+<title>Wave Buddy V3.5 FINAL - FIXED</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{background:#0A0A0A;font-family:Inter, Arial, sans-serif;overflow:hidden;height:100vh;height:100dvh}
@@ -133,11 +133,12 @@ body.chatting #thought{opacity:0!important}
 @keyframes captionPop{0%{transform:translateX(-50%) translateY(8px) scale(.85);opacity:0}100%{transform:translateX(-50%) translateY(0) scale(1);opacity:1}}
 body.chatting #captionBubble{display:none!important}
 #miniLabel{position:absolute;top:-22px;left:50%;transform:translateX(-50%);background:#FFD700;color:#000;font-size:8px;font-weight:900;padding:3px 8px;border-radius:999px;white-space:nowrap;pointer-events:none}
-#moodDot{position:absolute;bottom:-30px;left:50%;transform:translateX(-50%);font-size:8px;color:#888;white-space:nowrap}
+/* FIXED - subtle, not bold/distracting */
+#moodDot{position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:400;color:rgba(255,255,255,0.45);white-space:nowrap;z-index:20;pointer-events:none;letter-spacing:0.2px;text-shadow:0 1px 2px rgba(0,0,0,0.6)}
 #chatPanel{display:none;position:absolute;z-index:30;width:min(300px, calc(100vw - 20px));max-width:calc(100vw - 20px);background:#1E1E1E;border:2px solid #FFD700;border-radius:18px;box-shadow:0 12px 30px rgba(0,0,0,.8);overflow:hidden}
 #chatPanel.open{display:block}
-#chatHeader{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 10px 10px 12px;background:#1A1505;user-select:none}
-#chatDragZone{flex:1;min-width:0;cursor:grab;touch-action:none;padding:2px 0}
+#chatHeader{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px 10px 12px 12px;background:#1A1505;user-select:none}
+#chatDragZone{flex:1;min-width:0;cursor:grab;touch-action:none;padding:12px 0}
 #chatHeader b{font-size:13px;color:#FFD700;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #chatHeader span{font-size:10px;color:#888;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #closeBtn{background:#FF4757!important;color:#fff!important;border:0!important;width:32px!important;height:32px!important;min-width:32px;border-radius:50%!important;font-size:16px!important;cursor:pointer;flex-shrink:0;margin-left:4px;z-index:5}
@@ -158,18 +159,21 @@ body.chatting #captionBubble{display:none!important}
 .avatarChip{padding:5px 8px;border-radius:999px;border:1px solid #555;background:#222;color:#fff;font-size:10px;font-weight:800;cursor:pointer}
 .avatarChip.active{background:#FFD700;color:#000;border-color:#FFD700}
 #minimizeBtn{position:absolute;top:10px;right:10px;z-index:100;background:#FFD700;color:#000;border:none;padding:8px 12px;border-radius:999px;font-weight:900;font-size:11px;cursor:pointer}
+/* FIXED - hidden until tap */
 #miniOptions{display:none;position:absolute;bottom:-48px;left:50%;transform:translateX(-50%);gap:6px;z-index:99;white-space:nowrap}
-body.mini-mode #miniOptions{display:flex}
+body.mini-mode #miniOptions{display:none}
+body.mini-mode #miniOptions.show{display:flex}
 #miniTalkBtn,#miniHomeBtn{background:#FFD700;color:#000;font-weight:900;font-size:11px;padding:8px 11px;border-radius:999px;border:none;cursor:pointer}
 #miniHomeBtn{background:#fff}
 #miniChat{display:none;position:absolute;top:170px;left:50%;transform:translateX(-50%);width:260px;background:#1E1E1E;border:2px solid #FFD700;border-radius:14px;padding:8px;z-index:100}
 #miniChat.open{display:block}
+#miniChatDrag{cursor:grab;touch-action:none;padding:6px;text-align:center;font-size:10px;color:#FFD700;font-weight:900;user-select:none}
 #miniChatLog{max-height:120px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin-bottom:6px}
 #miniChatRow{display:flex;gap:5px}
 #miniChatInput{flex:1;padding:8px;border-radius:8px;border:1px solid #555;background:#111;color:#fff;font-size:12px}
 #miniChatSend{padding:8px 10px;border-radius:8px;border:0;background:#FFD700;color:#000;font-weight:900;font-size:11px;cursor:pointer}
 body.mini-mode #room{background:transparent!important}
-body.mini-mode #chatPanel, body.mini-mode #hint, body.mini-mode #minimizeBtn, body.mini-mode #moodDot{display:none!important}
+body.mini-mode #chatPanel, body.mini-mode #hint, body.mini-mode #minimizeBtn{display:none!important}
 body.mini-mode #buddyWrap{top:50%}
 body.mini-mode #spriteBox{display:block!important;opacity:1!important;visibility:visible!important}
 #landing{position:absolute;top:48px;left:12px;right:12px;z-index:90;text-align:center;pointer-events:none}
@@ -213,6 +217,7 @@ body.mini-mode #landing{display:none!important}
       <button id="miniHomeBtn" onclick="tryExpandFromDemo(event)">🏠 FULL APP</button>
     </div>
     <div id="miniChat">
+      <div id="miniChatDrag">↕ DRAG ME • TAP X TO CLOSE</div>
       <div id="miniChatLog"><div class="wb-msg buddy">Hey! I'm here 💬</div></div>
       <div id="miniChatRow"><input id="miniChatInput" placeholder="Talk to me..."><button id="miniChatSend" onclick="sendMiniChat()">Send</button></div>
     </div>
@@ -241,25 +246,27 @@ var lastMoveIndex = -1;
 var IS_MINI = window.location.search.indexOf('mode=mini') !== -1;
 if(window.location.search.indexOf('overlay=1') !== -1){ document.body.classList.add('overlay'); }
 if(IS_MINI){ document.body.classList.add('overlay'); document.body.classList.add('mini-mode'); }
+
+/* === FIXED MINIMIZE / EXPAND - NO location.href, NO CRASH === */
 function tryMinimize(e){
   if(e) e.stopPropagation();
-  var isInApp = (window.location.protocol === 'file:');
-  if(isInApp){ window.location.href='wavebuddy://minimize'; return; }
+  if(window.AndroidMini && window.AndroidMini.minimize){ try{ window.AndroidMini.minimize(); }catch(err){} }
   document.body.classList.add('mini-mode');
   var wrap = document.getElementById('buddyWrap');
   wrap.style.left = '50%'; wrap.style.top = '50%'; wrap.style.transform = 'translate(-50%,-50%)';
   var box = document.getElementById('spriteBox');
   box.style.display = 'block'; box.style.opacity = '1'; box.style.visibility = 'visible';
+  var mo = document.getElementById('miniOptions'); if(mo) mo.classList.remove('show');
   if(isChatting){ try{ closeChat(); }catch(err){} }
 }
 function tryExpandFromDemo(e){
   if(e) e.stopPropagation();
-  var isInApp = (window.location.protocol === 'file:');
-  if(isInApp){ window.location.href='wavebuddy://expand'; return; }
+  if(window.AndroidMini && window.AndroidMini.expand){ try{ window.AndroidMini.expand(); }catch(err){} }
   document.body.classList.remove('mini-mode');
   var wrap = document.getElementById('buddyWrap');
   wrap.style.left = '50%'; wrap.style.top = '58%'; wrap.style.transform = 'translate(-50%,-50%)';
   var mc = document.getElementById('miniChat'); if(mc) mc.classList.remove('open');
+  var mo2 = document.getElementById('miniOptions'); if(mo2) mo2.classList.remove('show');
 }
 function loadMemory(){
   var m = null;
@@ -695,7 +702,8 @@ if('speechSynthesis' in window){
 }
 (function(){
   var wrap=document.getElementById('buddyWrap'); var panel=document.getElementById('chatPanel'); var dragZone=document.getElementById('chatDragZone');
-  var startX=0,startY=0,startLeft=0,startTop=0,moved=false,pressTimer=null,draggingChat=false,draggingBuddy=false,downTime=0;
+  var miniChatEl=document.getElementById('miniChat'); var miniDrag=document.getElementById('miniChatDrag');
+  var startX=0,startY=0,startLeft=0,startTop=0,moved=false,pressTimer=null,draggingChat=false,draggingBuddy=false,draggingMini=false,downTime=0;
   function getP(e){ return e.touches ? e.touches[0] : e; }
   function buddyDown(e){
     if(e.target.closest('#chatPanel')) return;
@@ -712,6 +720,10 @@ if('speechSynthesis' in window){
     var p=getP(e); startX=p.clientX; startY=p.clientY; startLeft=panel.offsetLeft; startTop=panel.offsetTop;
     draggingChat=true; moved=false; e.preventDefault(); e.stopPropagation();
   }
+  function miniDown(e){
+    var p=getP(e); startX=p.clientX; startY=p.clientY; startLeft=miniChatEl.offsetLeft; startTop=miniChatEl.offsetTop;
+    draggingMini=true; moved=false; e.preventDefault(); e.stopPropagation();
+  }
   function onMove(e){
     var p=getP(e); var dx=p.clientX-startX, dy=p.clientY-startY;
     if(draggingChat){
@@ -719,6 +731,13 @@ if('speechSynthesis' in window){
       var w=panel.offsetWidth||300;
       panel.style.left=Math.max(10,Math.min(window.innerWidth-w-10,startLeft+dx))+'px';
       panel.style.top=Math.max(10,Math.min(window.innerHeight-120,startTop+dy))+'px';
+      if(e.cancelable) e.preventDefault(); return;
+    }
+    if(draggingMini){
+      if(Math.abs(dx)>4||Math.abs(dy)>4) moved=true;
+      miniChatEl.style.left = Math.max(10, Math.min(window.innerWidth-270, startLeft+dx))+'px';
+      miniChatEl.style.top = Math.max(10, Math.min(window.innerHeight-150, startTop+dy))+'px';
+      miniChatEl.style.transform = 'none';
       if(e.cancelable) e.preventDefault(); return;
     }
     if(!draggingBuddy) return;
@@ -735,6 +754,7 @@ if('speechSynthesis' in window){
   function onUp(e){
     clearTimeout(pressTimer);
     if(draggingChat){ draggingChat=false; if(moved) saveChatPos(); return; }
+    if(draggingMini){ draggingMini=false; return; }
     if(!draggingBuddy) return;
     draggingBuddy=false;
     if(e.target.closest && e.target.closest('#chatPanel')) return;
@@ -745,10 +765,22 @@ if('speechSynthesis' in window){
     if(moved){ savePosition(); return; }
     if(didLongPress){ setTimeout(function(){didLongPress=false;},200); return; }
     if(Date.now()<chatLockUntil) return;
+    /* FIXED - mini-mode tap toggles options, not chat */
+    if(document.body.classList.contains('mini-mode')){
+      var opts = document.getElementById('miniOptions');
+      var miniChat = document.getElementById('miniChat');
+      if(miniChat && miniChat.classList.contains('open')){
+        miniChat.classList.remove('open');
+      } else {
+        opts.classList.toggle('show');
+      }
+      return;
+    }
     if(!isChatting) openChat(); else closeChat();
   }
   wrap.addEventListener('pointerdown', buddyDown);
   dragZone.addEventListener('pointerdown', chatDown);
+  if(miniDrag) miniDrag.addEventListener('pointerdown', miniDown);
   window.addEventListener('pointermove', onMove, {passive:false});
   window.addEventListener('pointerup', onUp);
   window.addEventListener('pointercancel', onUp);
@@ -757,14 +789,24 @@ if('speechSynthesis' in window){
   document.getElementById('speakBtn').addEventListener('click', function(e){ e.stopPropagation(); if(lastBuddyText) speakText(lastBuddyText); });
   document.getElementById('chatInput').addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); sendChat(); } });
   document.getElementById('chatInput').addEventListener('click', function(e){ e.stopPropagation(); });
-  document.getElementById('chatPanel').addEventListener('pointerdown', function(e){ if(e.target.closest('#chatDragZone')||e.target.id==='closeBtn') return; e.stopPropagation(); });
-  var miniInput = document.getElementById('miniChatInput');
-  if(miniInput){
-    miniInput.addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); sendMiniChat(); } });
-    miniInput.addEventListener('click', function(e){ e.stopPropagation(); });
-  }
+  document.getElementById('chatPanel').addEventListener('pointerdown', function(e){ if(e.target.closest('#chatDragZone')) return; e.stopPropagation(); });
+  document.getElementById('miniChatInput').addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); sendMiniChat(); } });
+  document.getElementById('miniChatInput').addEventListener('click', function(e){ e.stopPropagation(); });
+  document.getElementById('miniChat').addEventListener('pointerdown', function(e){ if(e.target.closest('#miniChatDrag')) return; e.stopPropagation(); });
+  document.getElementById('miniOptions').addEventListener('pointerdown', function(e){ e.stopPropagation(); });
 })();
-window.onload=function(){ try{ var saved=localStorage.getItem('waveBuddyAvatar'); if(saved && AVATARS[saved]) currentAvatarKey=saved; }catch(e){} setAvatar(currentAvatarKey); scheduleIdle(); setTimeout(function(){ var tc=getTimeContext(); var namePart=memory.name ? ', '+memory.name : ''; showCaption('☀️ '+tc.greeting+namePart+'! I am here.', 7000); },1200); };
+
+/* INIT */
+try{
+  var savedAvatar = localStorage.getItem('waveBuddyAvatar');
+  if(savedAvatar && AVATARS[savedAvatar]) currentAvatarKey = savedAvatar;
+}catch(e){}
+setAvatar(currentAvatarKey);
+try{
+  var savedPos = localStorage.getItem('waveBuddyPos');
+  if(savedPos){ var pp=JSON.parse(savedPos); var w=document.getElementById('buddyWrap'); w.style.left=pp.left+'px'; w.style.top=pp.top+'px'; w.style.transform='none'; }
+}catch(e){}
+scheduleIdle();
 </script>
 </body>
-</html>
+  </html>
