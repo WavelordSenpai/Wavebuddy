@@ -168,9 +168,10 @@ body.mini-mode #miniOptions{display:flex}
 #miniChatRow{display:flex;gap:5px}
 #miniChatInput{flex:1;padding:8px;border-radius:8px;border:1px solid #555;background:#111;color:#fff;font-size:12px}
 #miniChatSend{padding:8px 10px;border-radius:8px;border:0;background:#FFD700;color:#000;font-weight:900;font-size:11px;cursor:pointer}
-body.mini-mode #room{background:transparent}
+body.mini-mode #room{background:transparent!important}
 body.mini-mode #chatPanel, body.mini-mode #hint, body.mini-mode #minimizeBtn, body.mini-mode #moodDot{display:none!important}
 body.mini-mode #buddyWrap{top:50%}
+body.mini-mode #spriteBox{display:block!important;opacity:1!important;visibility:visible!important}
 #landing{position:absolute;top:48px;left:12px;right:12px;z-index:90;text-align:center;pointer-events:none}
 #landing h1{color:#fff;font-size:22px;font-weight:900;line-height:1.1}
 #landing h1 span{color:#FFD700}
@@ -185,7 +186,7 @@ body.mini-mode #landing{display:none!important}
 </head>
 <body>
 <div id="room">
-  <button id="minimizeBtn" onclick="window.location.href='wavebuddy://minimize'">— MINIMIZE TO BUDDY</button>
+  <button id="minimizeBtn" onclick="tryMinimize(event)">— MINIMIZE TO BUDDY</button>
   <div id="landing">
     <h1>Welcome to <span>Wave Buddy</span> 👋</h1>
     <p>Your AI friend that floats with you everywhere.<br>Chat, remember stuff, set reminders — with Tetra, Cube, Crystal, Dodeca, Icosa & Robo.</p>
@@ -209,7 +210,7 @@ body.mini-mode #landing{display:none!important}
     <div id="moodDot">● idle</div>
     <div id="miniOptions">
       <button id="miniTalkBtn" onclick="toggleMiniChat(event)">💬 TALK</button>
-      <button id="miniHomeBtn" onclick="window.location.href='wavebuddy://expand'">🏠 FULL APP</button>
+      <button id="miniHomeBtn" onclick="tryExpandFromDemo(event)">🏠 FULL APP</button>
     </div>
     <div id="miniChat">
       <div id="miniChatLog"><div class="wb-msg buddy">Hey! I'm here 💬</div></div>
@@ -240,6 +241,26 @@ var lastMoveIndex = -1;
 var IS_MINI = window.location.search.indexOf('mode=mini') !== -1;
 if(window.location.search.indexOf('overlay=1') !== -1){ document.body.classList.add('overlay'); }
 if(IS_MINI){ document.body.classList.add('overlay'); document.body.classList.add('mini-mode'); }
+function tryMinimize(e){
+  if(e) e.stopPropagation();
+  var isInApp = (window.location.protocol === 'file:');
+  if(isInApp){ window.location.href='wavebuddy://minimize'; return; }
+  document.body.classList.add('mini-mode');
+  var wrap = document.getElementById('buddyWrap');
+  wrap.style.left = '50%'; wrap.style.top = '50%'; wrap.style.transform = 'translate(-50%,-50%)';
+  var box = document.getElementById('spriteBox');
+  box.style.display = 'block'; box.style.opacity = '1'; box.style.visibility = 'visible';
+  if(isChatting){ try{ closeChat(); }catch(err){} }
+}
+function tryExpandFromDemo(e){
+  if(e) e.stopPropagation();
+  var isInApp = (window.location.protocol === 'file:');
+  if(isInApp){ window.location.href='wavebuddy://expand'; return; }
+  document.body.classList.remove('mini-mode');
+  var wrap = document.getElementById('buddyWrap');
+  wrap.style.left = '50%'; wrap.style.top = '58%'; wrap.style.transform = 'translate(-50%,-50%)';
+  var mc = document.getElementById('miniChat'); if(mc) mc.classList.remove('open');
+}
 function loadMemory(){
   var m = null;
   try{ m = JSON.parse(localStorage.getItem('waveBuddyMemory') || 'null'); }catch(e){}
@@ -643,6 +664,7 @@ function sendMiniChat(){
   }, 1500);
 }
 function openChat(){
+  if(document.body.classList.contains('mini-mode')){ toggleMiniChat(); return; }
   if(IS_MINI){ toggleMiniChat(); return; }
   if(isChatting) return; if(Date.now()<chatLockUntil) return; chatLockUntil=Date.now()+400; isChatting=true; document.body.classList.add('chatting'); positionChat(); document.getElementById('chatPanel').classList.add('open'); var tc=getTimeContext(); var greet = memory.name ? tc.greeting+', '+memory.name+'!' : tc.greeting+'!'; setEmotion('happy'); updateMood('talking'); var lines=[greet+' What do you need?', 'Yo! I was just chilling. What is up?', 'You tapped me! What do you want?']; addMsg('buddy',lines[Math.floor(Math.random()*lines.length)]); setTimeout(function(){ var inp=document.getElementById('chatInput'); if(inp) inp.focus(); },100); }
 function closeChat(){ if(!isChatting) return; isChatting=false; document.body.classList.remove('chatting'); document.getElementById('chatPanel').classList.remove('open'); chatLockUntil=Date.now()+400; saveChatPos(); showThought('😴'); setEmotion('tired'); updateMood('idle'); scheduleIdle(); }
@@ -742,7 +764,7 @@ if('speechSynthesis' in window){
     miniInput.addEventListener('click', function(e){ e.stopPropagation(); });
   }
 })();
-window.onload=function(){ try{ var saved=localStorage.getItem('waveBuddyAvatar'); if(saved && AVATARS[saved]) currentAvatarKey=saved; var savedPos=localStorage.getItem('waveBuddyPos'); if(savedPos){ var p=JSON.parse(savedPos); var w=document.getElementById('buddyWrap'); w.style.left=p.left+'px'; w.style.top=p.top+'px'; w.style.transform='none'; } }catch(e){} setAvatar(currentAvatarKey); scheduleIdle(); setTimeout(function(){ var tc=getTimeContext(); var namePart=memory.name ? ', '+memory.name : ''; showCaption('☀️ '+tc.greeting+namePart+'! I am here.', 7000); },1200); };
+window.onload=function(){ try{ var saved=localStorage.getItem('waveBuddyAvatar'); if(saved && AVATARS[saved]) currentAvatarKey=saved; }catch(e){} setAvatar(currentAvatarKey); scheduleIdle(); setTimeout(function(){ var tc=getTimeContext(); var namePart=memory.name ? ', '+memory.name : ''; showCaption('☀️ '+tc.greeting+namePart+'! I am here.', 7000); },1200); };
 </script>
 </body>
 </html>
