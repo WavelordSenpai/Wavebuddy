@@ -4,7 +4,7 @@ import android.content.Intent; import android.graphics.Color; import android.gra
 import android.util.DisplayMetrics;
 import android.view.Gravity; import android.view.MotionEvent; import android.view.View; import android.view.WindowManager;
 import android.webkit.JavascriptInterface; import android.webkit.WebResourceRequest; import android.webkit.WebSettings; import android.webkit.WebView; import android.webkit.WebViewClient;
-import android.widget.FrameLayout; import android.widget.TextView; import android.speech.tts.TextToSpeech; import android.widget.Toast; import java.util.Locale;
+import android.widget.LinearLayout; import android.widget.TextView; import android.speech.tts.TextToSpeech; import android.widget.Toast; import java.util.Locale;
 public class FloatingBuddy extends Service {
     private WindowManager wm; private View fv; private WindowManager.LayoutParams params; private WebView web; private TextToSpeech tts;
     private int initX, initY; private float downX, downY; private boolean dragging = false;
@@ -28,7 +28,15 @@ public class FloatingBuddy extends Service {
         Notification n = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? new Notification.Builder(this, chId).setContentTitle("WaveBuddy is running").setContentText("Drag the top bar to move").setSmallIcon(android.R.drawable.sym_def_app_icon).build() : new Notification.Builder(this).setContentTitle("WaveBuddy is running").setContentText("Drag top bar").setSmallIcon(android.R.drawable.sym_def_app_icon).build();
         try { startForeground(1, n); } catch (Exception ignored) {}
         wm = (WindowManager) getSystemService(WINDOW_SERVICE);
-        FrameLayout frame = new FrameLayout(this);
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setBackgroundColor(Color.TRANSPARENT);
+        TextView dragBar = new TextView(this);
+        dragBar.setText("⋮⋮  DRAG ME TO MOVE  ⋮⋮");
+        dragBar.setTextSize(12); dragBar.setTextColor(Color.WHITE); dragBar.setGravity(Gravity.CENTER);
+        dragBar.setBackgroundColor(Color.parseColor("#DD222222"));
+        dragBar.setClickable(true); dragBar.setFocusable(true);
+        root.addView(dragBar, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 64));
         web = new WebView(this);
         WebSettings ws = web.getSettings(); ws.setJavaScriptEnabled(true); ws.setDomStorageEnabled(true); ws.setAllowFileAccess(true); ws.setAllowContentAccess(true); ws.setMediaPlaybackRequiresUserGesture(false);
         web.setBackgroundColor(Color.TRANSPARENT);
@@ -44,20 +52,12 @@ public class FloatingBuddy extends Service {
             private boolean handle(String u){ if(u != null && u.startsWith("wavebuddy://expand")){ openApp(); return true; } return false; }
         });
         web.loadUrl("file:///android_asset/public/index.html?mode=mini&overlay=1");
-        frame.addView(web, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
-        // DRAG BAR - separate View on top, WebView CANNOT steal this touch
-        TextView dragBar = new TextView(this);
-        dragBar.setText("⋮⋮  DRAG ME TO MOVE  ⋮⋮");
-        dragBar.setTextSize(11); dragBar.setTextColor(Color.WHITE); dragBar.setGravity(Gravity.CENTER);
-        dragBar.setBackgroundColor(Color.parseColor("#66000000"));
-        FrameLayout.LayoutParams barParams = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, 48);
-        barParams.gravity = Gravity.TOP;
-        frame.addView(dragBar, barParams);
-        fv = frame;
+        root.addView(web, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f));
+        fv = root;
         int type = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_PHONE;
         DisplayMetrics dm = new DisplayMetrics(); try{ wm.getDefaultDisplay().getMetrics(dm); }catch(Exception ignored){}
         int screenW = dm.widthPixels > 0 ? dm.widthPixels : 1080;
-        int winW = 320; int winH = 500;
+        int winW = 320; int winH = 620;
         int centerX = (screenW - winW) / 2; if(centerX < 0) centerX = 0;
         params = new WindowManager.LayoutParams(winW, winH, type, WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL, PixelFormat.TRANSLUCENT);
         params.gravity = Gravity.TOP | Gravity.START;
@@ -80,20 +80,6 @@ public class FloatingBuddy extends Service {
                 return true;
             }
         });
-        // Also keep WebView drag as backup
-        web.setOnTouchListener(new View.OnTouchListener(){
-            @Override public boolean onTouch(View v, MotionEvent e){
-                if(e.getAction() == MotionEvent.ACTION_DOWN){ initX = params.x; initY = params.y; downX = e.getRawX(); downY = e.getRawY(); dragging = false; return false; }
-                if(e.getAction() == MotionEvent.ACTION_MOVE){
-                    float dx = e.getRawX() - downX; float dy = e.getRawY() - downY;
-                    if(!dragging && (Math.abs(dx) > 15 || Math.abs(dy) > 15)){ dragging = true; }
-                    if(dragging){ params.x = initX + (int)dx; params.y = initY + (int)dy; if(params.x < -220) params.x = -220; if(params.x > screenW-100) params.x = screenW-100; if(params.y < 0) params.y = 0; try{ wm.updateViewLayout(fv, params); }catch(Exception ignored){} return true; }
-                    return false;
-                }
-                if(e.getAction() == MotionEvent.ACTION_UP){ boolean was = dragging; dragging = false; if(was) return true; return false; }
-                return false;
-            }
-        });
     }
     private void openApp(){ Intent i = new Intent(FloatingBuddy.this, MainActivity.class); i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT); startActivity(i); stopSelf(); }
     @Override public int onStartCommand(Intent intent, int flags, int startId) { return START_STICKY; }
@@ -103,4 +89,4 @@ public class FloatingBuddy extends Service {
         try { if (fv != null && wm != null) wm.removeView(fv); } catch (Exception e) {}
         try { if(web != null) web.destroy(); } catch(Exception ignored){}
     }
-    }
+            }
