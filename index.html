@@ -4,13 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#0A0A0A">
-<title>Wave Buddy V3.5 FINAL</title>
+<title>Wave Buddy V3.6 FIXED</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{background:#0A0A0A;font-family:Inter, Arial, sans-serif;overflow:hidden;height:100vh;height:100dvh}
 #room{width:100%;height:100vh;height:100dvh;position:relative;background:radial-gradient(circle at 50% 30%, #1A1505 0%, #0A0A0A 70%);overflow:hidden}
 body.overlay #room{background:transparent}
 body.overlay #hint{display:none}
+body.overlay #topBar{display:none !important}
+body.overlay #chatPanel{display:none !important}
 #buddyWrap{position:absolute;left:50%;top:55%;transform:translate(-50%,-50%);width:130px;height:160px;z-index:10;cursor:grab;touch-action:none;will-change:transform}
 #buddyWrap.reminder-active{z-index:50}
 #spriteBox{width:130px;height:160px;position:relative;z-index:1;transition:transform .6s cubic-bezier(.25,1,.35,1);transform-origin:center center;filter:drop-shadow(0 12px 12px rgba(0,0,0,.45))}
@@ -156,9 +158,14 @@ body.chatting #thought{opacity:0!important}
 #avatarPicker{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}
 .avatarChip{padding:5px 8px;border-radius:999px;border:1px solid #555;background:#222;color:#fff;font-size:10px;font-weight:800;cursor:pointer}
 .avatarChip.active{background:#FFD700;color:#000;border-color:#FFD700}
+#topBar{position:absolute;top:0;left:0;right:0;z-index:100;display:flex;justify-content:space-between;align-items:center;padding:12px}
+#topBar .title{color:#FFD700;font-weight:900;font-size:15px}
+#topBar .sub{color:#888;font-size:10px}
+#minimizeBtn{width:38px;height:38px;border-radius:10px;border:0;background:#111;color:#fff;font-size:22px;cursor:pointer}
 </style>
 </head>
 <body>
+<div id="topBar"><div><div class="title">Wave Friends</div><div class="sub">Your personal assistant — swipe to meet them</div></div><button id="minimizeBtn" onclick="minimizeApp()">—</button></div>
 <div id="room">
   <div id="butterfly"><svg viewBox="0 0 28 28"><path d="M14 14 C6 4 2 10 8 14 C2 18 6 24 14 14 Z" fill="#FF9F43"/><path d="M14 14 C22 4 26 10 20 14 C26 18 22 24 14 14 Z" fill="#4CC9FF"/><circle cx="14" cy="14" r="2" fill="#111"/></svg></div>
   <div id="buddyWrap">
@@ -190,7 +197,11 @@ var idleTimer = null;
 var zzzInterval = null;
 var eyeMoveInterval = null;
 var lastMoveIndex = -1;
-if(window.location.search.indexOf('overlay=1') !== -1){ document.body.classList.add('overlay'); }
+function minimizeApp(){
+  if(window.AndroidMini && window.AndroidMini.minimize){ try{ window.AndroidMini.minimize(); return; }catch(e){} }
+  window.location.href = "wavebuddy://minimize";
+}
+if(window.location.search.indexOf('overlay=1') !== -1 || window.location.search.indexOf('mode=mini') !== -1){ document.body.classList.add('overlay'); document.body.style.background='transparent'; }
 function loadMemory(){
   var m = null;
   try{ m = JSON.parse(localStorage.getItem('waveBuddyMemory') || 'null'); }catch(e){}
@@ -653,17 +664,6 @@ if('speechSynthesis' in window){
   document.getElementById('chatPanel').addEventListener('pointerdown', function(e){ if(e.target.closest('#chatDragZone')||e.target.id==='closeBtn') return; e.stopPropagation(); });
 })();
 window.onload=function(){ try{ var saved=localStorage.getItem('waveBuddyAvatar'); if(saved && AVATARS[saved]) currentAvatarKey=saved; var savedPos=localStorage.getItem('waveBuddyPos'); if(savedPos){ var p=JSON.parse(savedPos); var w=document.getElementById('buddyWrap'); w.style.left=p.left+'px'; w.style.top=p.top+'px'; w.style.transform='none'; } }catch(e){} setAvatar(currentAvatarKey); scheduleIdle(); setTimeout(function(){ var tc=getTimeContext(); var namePart=memory.name ? ', '+memory.name : ''; showCaption('☀️ '+tc.greeting+namePart+'! I am here.', 7000); },1200); };
-<script>
-// Floating mode: show ONLY the animated buddy, hide everything else
-if (window.location.search.includes('overlay=1')) {
-  document.body.style.background = 'transparent';
-  document.body.classList.add('overlay-mode');
-  const style = document.createElement('style');
-  style.innerHTML = '.overlay-mode * { display:none !important; } .overlay-mode #buddy, .overlay-mode #buddy * { display:block !important; } .overlay-mode #buddy { position:fixed !important; top:0 !important; left:0 !important; }';
-  document.head.appendChild(style);
-}
-</script>
-</body>
 </script>
 </body>
 </html>
