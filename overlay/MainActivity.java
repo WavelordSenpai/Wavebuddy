@@ -76,6 +76,14 @@ public class MainActivity extends Activity {
             }
             @JavascriptInterface public void speak(String text){ doSpeak(text); }
             @JavascriptInterface public void testVoice(){ doSpeak("Hello! This is Wave Buddy. Can you hear me now?"); }
+            // --- ADDED FOR EXIT / SAY GOODBYE BUTTON ---
+            @JavascriptInterface public void exit(){
+                runOnUiThread(() -> {
+                    try{ stopService(new Intent(MainActivity.this, FloatingBuddy.class)); }catch(Exception ignored){}
+                    finishAffinity();
+                });
+            }
+            // --- END ADDED ---
         }, "AndroidMini");
         web.setWebViewClient(new WebViewClient(){
             @Override public boolean shouldOverrideUrlLoading(WebView v, String url){ return handle(url); }
