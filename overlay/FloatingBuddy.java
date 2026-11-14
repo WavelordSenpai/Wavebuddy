@@ -15,6 +15,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 
 public class FloatingBuddy extends Service {
@@ -26,20 +27,16 @@ public class FloatingBuddy extends Service {
 
     @Override public void onCreate() {
         super.onCreate();
-        // Android 12+ REQUIRES a foreground notification or it kills the service
         if (Build.VERSION.SDK_INT >= 26) {
             NotificationChannel ch = new NotificationChannel("buddy", "Wave Buddy", NotificationManager.IMPORTANCE_LOW);
             ((NotificationManager) getSystemService(NOTIFICATION_SERVICE)).createNotificationChannel(ch);
-            Notification n = new Notification.Builder(this, "buddy").setContentTitle("Wave Buddy is floating").setContentText("Tap buddy to come back").setSmallIcon(android.R.drawable.sym_def_app_icon).build();
+            Notification n = new Notification.Builder(this, "buddy").setContentTitle("Wave Buddy is floating").setContentText("Tap buddy to talk or go home").setSmallIcon(android.R.drawable.sym_def_app_icon).build();
             startForeground(1, n);
         }
-        // If user hasn't granted Draw over apps yet, DON'T crash - just open main app instead
         if (Build.VERSION.SDK_INT >= 23 && !Settings.canDrawOverlays(this)) {
             Intent i = new Intent(this, MainActivity.class);
             i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(i);
-            stopSelf();
-            return;
+            startActivity(i); stopSelf(); return;
         }
         try {
             windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
@@ -48,53 +45,62 @@ public class FloatingBuddy extends Service {
             web.getSettings().setJavaScriptEnabled(true);
             web.getSettings().setDomStorageEnabled(true);
             web.setBackgroundColor(Color.TRANSPARENT);
-            // FIXED: buddy must be clickable to come back
             web.setClickable(true);
             web.setFocusable(true);
+            // THIS is what makes TALK + FULL APP work in mini mode
+            web.setWebViewClient(new WebViewClient(){
+                @Override public boolean shouldOverrideUrlLoading(WebView v, String url){
+                    if(url.equals("wavebuddy://expand")){
+                        Intent i = new Intent(FloatingBuddy.this, MainActivity.class);
+                        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                        startActivity(i);
+                        stopSelf();
+                        return true;
+                    }
+                    return false;
+                }
+            });
             web.loadUrl("file:///android_asset/public/index.html?mode=mini");
-            frame.addView(web, new FrameLayout.LayoutParams(320, 380));
+            frame.addView(web, new FrameLayout.LayoutParams(320, 420));
             floatingView = frame;
 
             int type = Build.VERSION.SDK_INT >= 26 ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_PHONE;
-            params = new WindowManager.LayoutParams(320, 380, type,
+            params = new WindowManager.LayoutParams(320, 420, type,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
                 PixelFormat.TRANSLUCENT);
             params.gravity = Gravity.TOP | Gravity.LEFT;
             params.x = 100; params.y = 300;
             windowManager.addView(floatingView, params);
 
+            // Drag to move - tap is handled by the web page itself (TALK / FULL APP)
             floatingView.setOnTouchListener(new View.OnTouchListener() {
                 private int initialX, initialY;
                 private float initialTouchX, initialTouchY;
-                private long downTime; private boolean moved = false;
+                private boolean moved = false;
                 @Override public boolean onTouch(View v, MotionEvent event) {
                     switch (event.getAction()) {
                         case MotionEvent.ACTION_DOWN:
                             initialX = params.x; initialY = params.y;
                             initialTouchX = event.getRawX(); initialTouchY = event.getRawY();
-                            downTime = System.currentTimeMillis(); moved = false;
-                            return true;
+                            moved = false;
+                            return false;
                         case MotionEvent.ACTION_MOVE:
                             int dx = (int)(event.getRawX() - initialTouchX);
                             int dy = (int)(event.getRawY() - initialTouchY);
                             if (Math.abs(dx) > 10 || Math.abs(dy) > 10) moved = true;
-                            params.x = initialX + dx; params.y = initialY + dy;
-                            windowManager.updateViewLayout(floatingView, params);
-                            return true;
-                        case MotionEvent.ACTION_UP:
-                            if (!moved && System.currentTimeMillis() - downTime < 300) {
-                                Intent i = new Intent(FloatingBuddy.this, MainActivity.class);
-                                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-                                startActivity(i);
-                                stopSelf();
+                            if (moved) {
+                                params.x = initialX + dx; params.y = initialY + dy;
+                                windowManager.updateViewLayout(floatingView, params);
+                                return true;
                             }
-                            return true;
+                            return false;
+                        case MotionEvent.ACTION_UP:
+                            return false;
                     }
                     return false;
                 }
             });
         } catch (Exception e) {
-            // Never crash - fall back to full app
             try {
                 Intent i = new Intent(this, MainActivity.class);
                 i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -107,4 +113,4 @@ public class FloatingBuddy extends Service {
         super.onDestroy();
         try { if (floatingView != null && windowManager != null) windowManager.removeView(floatingView); } catch (Exception e) {}
     }
-}
+                    }
