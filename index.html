@@ -124,12 +124,12 @@ body.chatting #captionBubble{display:none!important}
 body.mini-mode #minimizeBtn{display:none!important}
 body.chatting #minimizeBtn{display:none!important}
 body.mini-mode #room{overflow:hidden!important}
-body.mini-mode #buddyWrap{left:50%!important;top:140px!important;transform:translate(-50%,-50%)!important}
+body.mini-mode #buddyWrap{left:50%;top:140px;transform:translate(-50%,-50%)}
 #miniOptions{display:none;position:absolute;bottom:-28px;left:50%;transform:translateX(-50%);gap:6px;z-index:99999;white-space:nowrap}
 #miniOptions.show{display:flex}
 #miniTalkBtn{background:#FFD700;color:#000;font-weight:900;font-size:11px;padding:9px 12px;border-radius:999px;border:none;cursor:pointer;white-space:nowrap}
 #miniHomeBtn{background:#fff;color:#000;font-weight:900;font-size:11px;padding:9px 12px;border-radius:999px;border:none;cursor:pointer;white-space:nowrap}
-#miniChat{display:none;position:absolute;top:150px;left:50%;transform:translateX(-50%);width:284px;max-width:284px;background:#1E1E1E;border:2px solid #FFD700;border-radius:14px;padding:8px;z-index:99999;box-sizing:border-box}
+#miniChat{display:none;position:absolute;top:150px;left:50%;transform:translateX(-50%);width:min(284px,92vw);max-width:92vw;background:#1E1E1E;border:2px solid #FFD700;border-radius:14px;padding:8px;z-index:99999;box-sizing:border-box}
 #miniChat.open{display:block}
 #miniChatDrag{cursor:grab;touch-action:none;padding:6px;text-align:center;font-size:10px;color:#FFD700;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #miniChatLog{max-height:130px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin-bottom:6px}
@@ -251,7 +251,7 @@ function playAllMoves(){var moves=[['wavingSlow',1600,'happy','👋'],['thumbsUp
 async function askBuddy(userText){var lower=userText.toLowerCase();if(lower.includes('show me all moves')||lower.includes('do all moves')||lower.includes('demo mode')){playAllMoves();return;}var sm=lower.match(/(?:switch to|become|turn into|i want|use)\s+(tetra|cube|crystal|dodeca|icosa|robo|robot|octa)/);if(sm){var map={octa:'crystal',robot:'robot'};var want=map[sm[1]]||sm[1];if(AVATARS[want]){setAvatar(want);addMsg('buddy','Switched! I am '+AVATARS[want].name+' now.');return;}}if(lower.includes('my name')||lower.includes('who am i')){var jl=learnFromMessage(userText);if(jl.name){addMsg('buddy','Got it, '+jl.name+'! Saved.');return;}if(memory.name){addMsg('buddy','Your name is '+memory.name+'!');return;}addMsg('buddy','I don\'t know your name yet - say "hey im..."');return;}if(lower.includes('what do you remember')){var all=[];if(memory.name)all.push('Your name is '+memory.name);if(memory.facts.length)all=all.concat(memory.facts);addMsg('buddy',all.length?'Here is what I remembered:<br>• '+all.join('<br>• '):'Nothing yet.');return;}if(lower.includes('my reminders')){var p=memory.reminders.filter(function(r){return !r.done;});addMsg('buddy',p.length?'Your reminders: '+p.map(function(r){return '• '+r.text;}).join('<br>'):'No reminders.');return;}if(lower.includes('clear reminders')){memory.reminders=[];saveMemory(memory);addMsg('buddy','Cleared all reminders.');return;}if(lower.includes('forget everything')){memory.name=null;memory.facts=[];saveMemory(memory);addMsg('buddy','Okay, forgot everything.');return;}var rem=parseReminder(userText);if(rem){memory.reminders.push({text:rem.text,time:rem.time,done:false});saveMemory(memory);addMsg('buddy','Got it! I will remind you to '+rem.text.charAt(0).toLowerCase()+rem.text.slice(1)+' in '+formatDelay(rem.delay)+'.');showCaption('⏰ Reminder set: '+rem.text,5000);return;}var learned=learnFromMessage(userText);if(learned.fact){addMsg('buddy','Got it'+(memory.name?', '+memory.name:'')+' - locked in: "'+learned.fact+'".');memory.chatCount++;saveMemory(memory);return;}if(learned.name){addMsg('buddy','Nice to meet you, '+learned.name+'!');memory.chatCount++;saveMemory(memory);return;}memory.chatCount++;saveMemory(memory);var box=document.getElementById('spriteBox');box.classList.add('talking');setEmotion('happy');addMsg('buddy','🤔 Thinking...');var th=document.getElementById('chatLog').lastChild;try{var res=await fetch(AI_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:getSystemPrompt()+'\n\nUser: '+userText+'\nBuddy:'})});if(!res.ok)throw new Error('AI');var data=await res.json();var ans=data.answer||data.text||'';if(!ans)throw new Error('empty');th.remove();addMsg('buddy',ans);showThought('💬');}catch(e){th.remove();addMsg('buddy',localFallbackAnswer(userText));}box.classList.remove('talking');setEmotion('idle');}
 function sendChat(){var inp=document.getElementById('chatInput');var t=inp.value.trim();if(!t)return;addMsg('you',t);inp.value='';askBuddy(t);}
 function positionChat(){var p=document.getElementById('chatPanel');p.style.left='50%';p.style.top='50%';p.style.transform='translate(-50%,-50%)';}
-function toggleMiniChat(e){if(e)e.stopPropagation();var c=document.getElementById('miniChat');c.classList.toggle('open');if(c.classList.contains('open'))setTimeout(function(){var i=document.getElementById('miniChatInput');if(i)i.focus();},100);}
+function toggleMiniChat(e){if(e)e.stopPropagation();var c=document.getElementById('miniChat');var wasOpen=c.classList.contains('open');c.classList.toggle('open');if(!wasOpen){c.style.left='50%';c.style.top='150px';c.style.transform='translateX(-50%)';setTimeout(function(){var i=document.getElementById('miniChatInput');if(i)i.focus();},100);}}
 function sendMiniChat(){var inp=document.getElementById('miniChatInput');var txt=inp.value.trim();if(!txt)return;var log=document.getElementById('miniChatLog');var you=document.createElement('div');you.className='wb-msg you';you.textContent=txt;log.appendChild(you);inp.value='';inp.focus();var before=document.getElementById('chatLog').children.length;askBuddy(txt);setTimeout(function(){var cl=document.getElementById('chatLog');for(var i=before;i<cl.children.length;i++){var b=document.createElement('div');b.className='wb-msg buddy';b.innerHTML=cl.children[i].innerHTML;log.appendChild(b);}log.scrollTop=log.scrollHeight;var ii=document.getElementById('miniChatInput');if(ii)ii.focus();},1500);}
 function openChat(){if(isMiniMode()){toggleMiniChat();return;}if(isChatting)return;if(Date.now()<chatLockUntil)return;chatLockUntil=Date.now()+400;isChatting=true;document.body.classList.add('chatting');positionChat();document.getElementById('chatPanel').classList.add('open');var tc=getTimeContext();var greet=memory.name?tc.greeting+', '+memory.name+'!':tc.greeting+'!';setEmotion('happy');var lines=[greet+' What do you need?','Yo! I was just chilling. What is up?','You tapped me! What do you want?'];addMsg('buddy',lines[Math.floor(Math.random()*lines.length)]);setTimeout(function(){var inp=document.getElementById('chatInput');if(inp)inp.focus();},100);}
 function closeChat(){if(!isChatting)return;isChatting=false;document.body.classList.remove('chatting');document.getElementById('chatPanel').classList.remove('open');chatLockUntil=Date.now()+400;showThought('😴');setEmotion('tired');scheduleIdle();}
@@ -271,19 +271,23 @@ if('speechSynthesis' in window){speechSynthesis.getVoices();speechSynthesis.onvo
     if(!isMiniMode() && document.getElementById('spriteBox').className.indexOf('sleeping')!==-1){setSpriteState('popping',900,'surprised');showThought('😳 Awake!');}
     if(!isMiniMode()){pressTimer=setTimeout(function(){didLongPress=true;swapNextAvatar();if(navigator.vibrate)navigator.vibrate(50);},800);}
   }
-  function chatDown(e){var p=getP(e);startX=p.clientX;startY=p.clientY;startLeft=panel.offsetLeft;startTop=panel.offsetTop;draggingChat=true;moved=false;e.preventDefault();e.stopPropagation();}
-  function miniDown(e){var p=getP(e);startX=p.clientX;startY=p.clientY;startLeft=miniChatEl.offsetLeft;startTop=miniChatEl.offsetTop;draggingMini=true;moved=false;e.preventDefault();e.stopPropagation();}
+  function chatDown(e){var p=getP(e);startX=p.clientX;startY=p.clientY;var r=panel.getBoundingClientRect();startLeft=r.left;startTop=r.top;draggingChat=true;moved=false;e.preventDefault();e.stopPropagation();}
+  function miniDown(e){var p=getP(e);startX=p.clientX;startY=p.clientY;var r=miniChatEl.getBoundingClientRect();startLeft=r.left;startTop=r.top;miniChatEl.style.left=r.left+'px';miniChatEl.style.top=r.top+'px';miniChatEl.style.transform='none';draggingMini=true;moved=false;e.preventDefault();e.stopPropagation();}
   function onMove(e){
     var p=getP(e);var dx=p.clientX-startX,dy=p.clientY-startY;
-    if(draggingChat){if(Math.abs(dx)>4||Math.abs(dy)>4)moved=true;panel.style.left=Math.max(10,Math.min(window.innerWidth-(panel.offsetWidth||300)-10,startLeft+dx))+'px';panel.style.top=Math.max(10,Math.min(window.innerHeight-120,startTop+dy))+'px';panel.style.transform='none';if(e.cancelable)e.preventDefault();return;}
-    if(draggingMini){if(Math.abs(dx)>4||Math.abs(dy)>4)moved=true;miniChatEl.style.left=Math.max(0,Math.min(window.innerWidth-100,startLeft+dx))+'px';miniChatEl.style.top=Math.max(60,Math.min(window.innerHeight-80,startTop+dy))+'px';miniChatEl.style.transform='none';if(e.cancelable)e.preventDefault();return;}
+    if(draggingChat){if(Math.abs(dx)>4||Math.abs(dy)>4)moved=true;panel.style.left=Math.max(4,Math.min(window.innerWidth-(panel.offsetWidth||300)-4,startLeft+dx))+'px';panel.style.top=Math.max(4,Math.min(window.innerHeight-120,startTop+dy))+'px';panel.style.transform='none';if(e.cancelable)e.preventDefault();return;}
+    if(draggingMini){if(Math.abs(dx)>4||Math.abs(dy)>4)moved=true;miniChatEl.style.left=Math.max(4,Math.min(window.innerWidth-(miniChatEl.offsetWidth||284)-4,startLeft+dx))+'px';miniChatEl.style.top=Math.max(60,Math.min(window.innerHeight-80,startTop+dy))+'px';miniChatEl.style.transform='none';if(e.cancelable)e.preventDefault();return;}
     if(!draggingBuddy)return;
     if(Math.abs(dx)>6||Math.abs(dy)>6){moved=true;isDragging=true;clearTimeout(pressTimer);}
     if(moved){
       if(isMiniMode()){
-        var stepX=Math.round(p.clientX-lastMoveX);var stepY=Math.round(p.clientY-lastMoveY);
-        lastMoveX=p.clientX;lastMoveY=p.clientY;
-        if(window.AndroidMini&&window.AndroidMini.moveWindow){try{window.AndroidMini.moveWindow(stepX,stepY);}catch(err){}}
+        if(window.AndroidMini&&window.AndroidMini.moveWindow){
+          var stepX=Math.round(p.clientX-lastMoveX);var stepY=Math.round(p.clientY-lastMoveY);
+          lastMoveX=p.clientX;lastMoveY=p.clientY;
+          try{window.AndroidMini.moveWindow(stepX,stepY);}catch(err){}
+        } else {
+          wrap.style.left=Math.max(0,Math.min(window.innerWidth-140,startLeft+dx))+'px';wrap.style.top=Math.max(0,Math.min(window.innerHeight-170,startTop+dy))+'px';wrap.style.transform='none';
+        }
         if(e.cancelable)e.preventDefault();
       } else {
         wrap.style.left=(startLeft+dx)+'px';wrap.style.top=(startTop+dy)+'px';wrap.style.transform='none';if(e.cancelable)e.preventDefault();
@@ -311,4 +315,4 @@ setAvatar(currentAvatarKey);
 scheduleIdle();
 </script>
 </body>
-</html>
+        </html>
