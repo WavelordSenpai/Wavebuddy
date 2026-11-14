@@ -24,7 +24,6 @@ jobs:
           cp index.html www/index.html
           cp *.css www/ 2>/dev/null || true
           cp *.js www/ 2>/dev/null || true
-          cp *.json www/ 2>/dev/null || true
           cp -r assets www/ 2>/dev/null || true
           cp -r icons www/ 2>/dev/null || true
           cp -r images www/ 2>/dev/null || true
@@ -32,38 +31,52 @@ jobs:
           if [ ! -d android ]; then npx cap add android || true; fi
           npx cap sync android
 
-          # FIX ICON
-          if [ -f icon.png ]; then
-            for d in mipmap-mdpi mipmap-hdpi mipmap-xhdpi mipmap-xxhdpi mipmap-xxxhdpi; do
-              mkdir -p android/app/src/main/res/$d
-              cp icon.png android/app/src/main/res/$d/ic_launcher.png
-              cp icon.png android/app/src/main/res/$d/ic_launcher_round.png
-              cp icon.png android/app/src/main/res/$d/ic_launcher_foreground.png
-            done
-            rm -rf android/app/src/main/res/mipmap-anydpi-v26
+          # --- FIX ICON - FAIL LOUDLY IF MISSING ---
+          if [ ! -f icon.png ]; then
+            echo "❌ ERROR: icon.png NOT FOUND in repo root - build would use robot icon"
+            ls -la *.png || true
+            exit 1
           fi
+          echo "✅ Found icon.png, size: $(stat -c%s icon.png) bytes"
+          for d in mipmap-mdpi mipmap-hdpi mipmap-xhdpi mipmap-xxhdpi mipmap-xxxhdpi; do
+            mkdir -p android/app/src/main/res/$d
+            cp icon.png android/app/src/main/res/$d/ic_launcher.png
+            cp icon.png android/app/src/main/res/$d/ic_launcher_round.png
+            cp icon.png android/app/src/main/res/$d/ic_launcher_foreground.png
+          done
+          rm -rf android/app/src/main/res/mipmap-anydpi-v26
+          ls -lh android/app/src/main/res/mipmap-xxxhdpi/
 
-          # FIX OVERLAY - copy YOUR java files from overlay/
+          # --- FIX OVERLAY - copy YOUR java files from overlay/ ---
           DEST=android/app/src/main/java/com/wavelord/wavebuddy
           mkdir -p $DEST
           if [ -d overlay ]; then
             cp overlay/*.java $DEST/ 2>/dev/null || true
+            echo "--- Overlay files copied ---"
             ls -l $DEST/
+            echo "--- Check FloatingBuddy dragBar ---"
+            grep -n "dragBar.setBackgroundColor" $DEST/FloatingBuddy.java || echo "dragBar line not found"
           fi
 
-          # FIX MANIFEST - use YOUR root AndroidManifest.xml (was ignored before)
+          # --- FIX MANIFEST - use YOUR root AndroidManifest.xml ---
           if [ -f AndroidManifest.xml ]; then
             cp AndroidManifest.xml android/app/src/main/AndroidManifest.xml
             echo "Copied YOUR AndroidManifest.xml"
-          else
-            # fallback: patch Capacitor manifest if no root manifest
-            if [ -f android/app/src/main/AndroidManifest.xml ]; then
-              grep -q "SYSTEM_ALERT_WINDOW" android/app/src/main/AndroidManifest.xml || sed -i 's|<application| <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />\n    <application|' android/app/src/main/AndroidManifest.xml
-              grep -q "FOREGROUND_SERVICE_SPECIAL_USE" android/app/src/main/AndroidManifest.xml || sed -i 's|<application| <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />\n    <application|' android/app/src/main/AndroidManifest.xml
-              grep -q "FloatingBuddy" android/app/src/main/AndroidManifest.xml || sed -i 's|</application>| <service android:name=".FloatingBuddy" android:exported="false" android:foregroundServiceType="specialUse" />\n    </application>|' android/app/src/main/AndroidManifest.xml
-            fi
           fi
+          # Force icon into manifest even if root manifest forgot it
+          if ! grep -q 'android:icon=' android/app/src/main/AndroidManifest.xml; then
+            echo "⚠️ Manifest missing icon, patching it"
+            sed -i 's|<application| <application android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round"|' android/app/src/main/AndroidManifest.xml
+          fi
+          echo "--- FINAL MANIFEST ---"
           cat android/app/src/main/AndroidManifest.xml
+
+          # --- FIX INDEX.HTML - force YOUR index.html into assets AFTER sync ---
+          mkdir -p android/app/src/main/assets/public
+          cp index.html android/app/src/main/assets/public/index.html
+          echo "--- Check assets index.html has miniChat ---"
+          grep -c "miniChat" android/app/src/main/assets/public/index.html || echo "miniChat NOT FOUND in assets!"
+
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug
