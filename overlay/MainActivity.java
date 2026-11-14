@@ -13,33 +13,27 @@ import android.webkit.WebResourceRequest;
 
 public class MainActivity extends Activity {
     private WebView web;
+    private android.speech.tts.TextToSpeech tts;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-    super.onCreate(savedInstanceState);
+        super.onCreate(savedInstanceState);
 
-    // FIX - FULLSCREEN, kill that white/blue bar at top
-    getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
-    getWindow().setNavigationBarColor(android.graphics.Color.BLACK);
-    getWindow().getDecorView().setSystemUiVisibility(
-        android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-        | android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-        | android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-        | android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-    );
-    // This stops the window from resizing / leaving a white gap when keyboard opens
-    getWindow().setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN);
-    
+        // FIX - DO NOT go under status bar. This was causing white bar + cut off button
+        getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
+        getWindow().getDecorView().setSystemUiVisibility(0);
+        getWindow().setStatusBarColor(android.graphics.Color.BLACK);
+        getWindow().setNavigationBarColor(android.graphics.Color.BLACK);
+        getWindow().setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
 
-        // Ask for overlay permission FIRST, or minimize will never work
         if (!Settings.canDrawOverlays(this)) {
             Intent perm = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                 Uri.parse("package:" + getPackageName()));
             startActivityForResult(perm, 123);
         }
 
-                web = new WebView(this);
-        web.setBackgroundColor(android.graphics.Color.BLACK); // FIX - no white flash
+        web = new WebView(this);
+        web.setBackgroundColor(android.graphics.Color.BLACK);
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
@@ -47,20 +41,17 @@ public class MainActivity extends Activity {
         s.setAllowContentAccess(true);
         s.setMediaPlaybackRequiresUserGesture(false);
 
-        // FIXED BRIDGE - this is what index.html now calls, no more location.href crash
         web.addJavascriptInterface(new Object(){
             @JavascriptInterface
             public void minimize(){
                 runOnUiThread(() -> {
                     try { startForegroundService(new Intent(MainActivity.this, FloatingBuddy.class)); } catch(Exception e){ try{ startService(new Intent(MainActivity.this, FloatingBuddy.class)); }catch(Exception ignored){} }
-                    // DON'T finish() - just go to background so FULL APP can come back
                     moveTaskToBack(true);
                 });
             }
             @JavascriptInterface
             public void expand(){
                 runOnUiThread(() -> {
-                    // Already in full app, just ensure we are front
                     Intent i = new Intent(MainActivity.this, MainActivity.class);
                     i.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_SINGLE_TOP);
                     startActivity(i);
@@ -68,16 +59,28 @@ public class MainActivity extends Activity {
             }
             @JavascriptInterface
             public void speak(String text){
-                // TTS handled in JS fallback, keep stub so it doesn't crash
+                if(text == null) return;
+                runOnUiThread(() -> {
+                    try{
+                        if(tts == null){
+                            tts = new android.speech.tts.TextToSpeech(MainActivity.this, status -> {
+                                if(status == android.speech.tts.TextToSpeech.SUCCESS){
+                                    tts.setLanguage(java.util.Locale.US);
+                                    tts.speak(text, android.speech.tts.TextToSpeech.QUEUE_FLUSH, null, "buddy");
+                                }
+                            });
+                        } else {
+                            tts.speak(text, android.speech.tts.TextToSpeech.QUEUE_FLUSH, null, "buddy");
+                        }
+                    }catch(Exception ignored){}
+                });
             }
         }, "AndroidMini");
 
         web.setWebViewClient(new WebViewClient(){
-            // Old API (your old code only had this, Android 12+ ignores it)
             @Override public boolean shouldOverrideUrlLoading(WebView v, String url){
                 return handleWaveBuddyUrl(url);
             }
-            // New API - THIS is the one that actually runs now
             @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest request){
                 return handleWaveBuddyUrl(request.getUrl().toString());
             }
@@ -101,13 +104,11 @@ public class MainActivity extends Activity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        // User came back from permission screen, nothing to do - they can tap MINIMIZE now
     }
 
     @Override
     protected void onNewIntent(Intent intent){
         super.onNewIntent(intent);
-        // When FloatingBuddy says EXPAND, we come back here
         if(web != null){
             web.evaluateJavascript("document.body.classList.remove('mini-mode')", null);
         }
@@ -116,6 +117,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onDestroy(){
         super.onDestroy();
+        try{ if(tts != null){ tts.stop(); tts.shutdown(); } }catch(Exception ignored){}
         if(web != null){ web.destroy(); }
     }
 }
