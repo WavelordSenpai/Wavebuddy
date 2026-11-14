@@ -10,6 +10,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.webkit.WebView;
+import android.widget.FrameLayout;
 
 public class FloatingBuddy extends Service {
     private WindowManager windowManager;
@@ -22,21 +23,20 @@ public class FloatingBuddy extends Service {
         super.onCreate();
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
 
+        FrameLayout frame = new FrameLayout(this);
         WebView web = new WebView(this);
         web.getSettings().setJavaScriptEnabled(true);
+        web.getSettings().setDomStorageEnabled(true);
         web.setBackgroundColor(Color.TRANSPARENT);
         web.setClickable(false);
         web.setFocusable(false);
-
-        // ONLY Crystal. Transparent background. Nothing else.
-        String html = "<html><body style='margin:0;background:transparent;'>"
-          + "<div style='font-size:130px;text-align:center;line-height:1;'>💎</div>"
-          + "</body></html>";
-        web.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null);
-        floatingView = web;
+        // YOUR friend, from index.html - don't change index.html
+        web.loadUrl("file:///android_asset/public/index.html");
+        frame.addView(web, new FrameLayout.LayoutParams(320, 380));
+        floatingView = frame;
 
         params = new WindowManager.LayoutParams(
-            220, 220,
+            320, 380,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
             PixelFormat.TRANSLUCENT);
@@ -63,12 +63,7 @@ public class FloatingBuddy extends Service {
                         windowManager.updateViewLayout(floatingView, params);
                         return true;
                     case MotionEvent.ACTION_UP:
-                        if (!moved && System.currentTimeMillis() - downTime < 300) {
-                            // TAP = open chat - for now, just opens app again later we make it a bubble
-                            Intent i = new Intent(FloatingBuddy.this, MainActivity.class);
-                            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                            startActivity(i);
-                        }
+                        // Tap = talk to him - for now it just keeps him there, chat is inside index.html
                         return true;
                 }
                 return false;
