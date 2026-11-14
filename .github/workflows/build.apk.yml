@@ -21,7 +21,7 @@ jobs:
         run: |
           npm install
           mkdir -p www
-          cp *.html www/ 2>/dev/null || true
+          cp index.html www/index.html
           cp *.css www/ 2>/dev/null || true
           cp *.js www/ 2>/dev/null || true
           cp *.json www/ 2>/dev/null || true
@@ -29,10 +29,10 @@ jobs:
           cp -r icons www/ 2>/dev/null || true
           cp -r images www/ 2>/dev/null || true
           npx cap init "Wave Buddy" com.wavelord.wavebuddy --web-dir=www || true
-          npx cap add android || true
+          if [ ! -d android ]; then npx cap add android || true; fi
           npx cap sync android
 
-          # FIX ICON - use your icon.png for all sizes + kill adaptive default
+          # FIX ICON
           if [ -f icon.png ]; then
             for d in mipmap-mdpi mipmap-hdpi mipmap-xhdpi mipmap-xxhdpi mipmap-xxxhdpi; do
               mkdir -p android/app/src/main/res/$d
@@ -43,7 +43,7 @@ jobs:
             rm -rf android/app/src/main/res/mipmap-anydpi-v26
           fi
 
-          # FIX OVERLAY - actually copy YOUR java files into the Android project
+          # FIX OVERLAY - copy YOUR java files from overlay/
           DEST=android/app/src/main/java/com/wavelord/wavebuddy
           mkdir -p $DEST
           if [ -d overlay ]; then
@@ -51,12 +51,19 @@ jobs:
             ls -l $DEST/
           fi
 
-          # FIX OVERLAY - add Draw over other apps permission
-          if [ -f android/app/src/main/AndroidManifest.xml ]; then
-            grep -q "SYSTEM_ALERT_WINDOW" android/app/src/main/AndroidManifest.xml || sed -i 's|<application| <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />\n    <application|' android/app/src/main/AndroidManifest.xml
-            # Also register FloatingBuddy service if not there
-            grep -q "FloatingBuddy" android/app/src/main/AndroidManifest.xml || sed -i 's|</application>| <service android:name=".FloatingBuddy" android:exported="false" android:foregroundServiceType="specialUse" />\n    </application>|' android/app/src/main/AndroidManifest.xml
+          # FIX MANIFEST - use YOUR root AndroidManifest.xml (was ignored before)
+          if [ -f AndroidManifest.xml ]; then
+            cp AndroidManifest.xml android/app/src/main/AndroidManifest.xml
+            echo "Copied YOUR AndroidManifest.xml"
+          else
+            # fallback: patch Capacitor manifest if no root manifest
+            if [ -f android/app/src/main/AndroidManifest.xml ]; then
+              grep -q "SYSTEM_ALERT_WINDOW" android/app/src/main/AndroidManifest.xml || sed -i 's|<application| <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />\n    <application|' android/app/src/main/AndroidManifest.xml
+              grep -q "FOREGROUND_SERVICE_SPECIAL_USE" android/app/src/main/AndroidManifest.xml || sed -i 's|<application| <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />\n    <application|' android/app/src/main/AndroidManifest.xml
+              grep -q "FloatingBuddy" android/app/src/main/AndroidManifest.xml || sed -i 's|</application>| <service android:name=".FloatingBuddy" android:exported="false" android:foregroundServiceType="specialUse" />\n    </application>|' android/app/src/main/AndroidManifest.xml
+            fi
           fi
+          cat android/app/src/main/AndroidManifest.xml
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug
