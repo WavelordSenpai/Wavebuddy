@@ -22,7 +22,6 @@ public class FloatingBuddy extends Service {
     @Override public void onCreate() {
         super.onCreate();
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
-
         FrameLayout frame = new FrameLayout(this);
         WebView web = new WebView(this);
         web.getSettings().setJavaScriptEnabled(true);
@@ -30,15 +29,14 @@ public class FloatingBuddy extends Service {
         web.setBackgroundColor(Color.TRANSPARENT);
         web.setClickable(false);
         web.setFocusable(false);
-        // YOUR friend, from index.html - don't change index.html
-        web.loadUrl("file:///android_asset/public/index.html");
+        web.loadUrl("file:///android_asset/public/index.html?mode=mini");
         frame.addView(web, new FrameLayout.LayoutParams(320, 380));
         floatingView = frame;
 
         params = new WindowManager.LayoutParams(
             320, 380,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
             PixelFormat.TRANSLUCENT);
         params.gravity = Gravity.TOP | Gravity.LEFT;
         params.x = 100; params.y = 300;
@@ -63,7 +61,12 @@ public class FloatingBuddy extends Service {
                         windowManager.updateViewLayout(floatingView, params);
                         return true;
                     case MotionEvent.ACTION_UP:
-                        // Tap = talk to him - for now it just keeps him there, chat is inside index.html
+                        if (!moved && System.currentTimeMillis() - downTime < 300) {
+                            Intent i = new Intent(FloatingBuddy.this, MainActivity.class);
+                            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                            startActivity(i);
+                            stopSelf();
+                        }
                         return true;
                 }
                 return false;
