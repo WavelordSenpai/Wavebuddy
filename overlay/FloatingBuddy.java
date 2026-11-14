@@ -8,12 +8,12 @@ import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
-import android.webkit.WebView;
-import android.webkit.WebSettings;
+import android.widget.ImageView;
 
 public class FloatingBuddy extends Service {
     private WindowManager windowManager;
     private View floatingView;
+    private WindowManager.LayoutParams params;
 
     @Override
     public IBinder onBind(Intent intent) { return null; }
@@ -21,47 +21,65 @@ public class FloatingBuddy extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        try {
-            windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
-            WebView webView = new WebView(this);
-            WebSettings settings = webView.getSettings();
-            settings.setJavaScriptEnabled(true);
-            settings.setDomStorageEnabled(true);
-            webView.loadUrl("file:///android_asset/public/index.html?overlay=1");
-            floatingView = webView;
+        windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
 
-            WindowManager.LayoutParams params = new WindowManager.LayoutParams(
-                320, 420,
-                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
-                PixelFormat.TRANSLUCENT);
-            params.gravity = Gravity.TOP | Gravity.LEFT;
-            params.x = 100;
-            params.y = 200;
-            windowManager.addView(floatingView, params);
+        // Use an ImageView, NOT WebView - so taps actually work
+        ImageView img = new ImageView(this);
+        // This uses YOUR icon.png as the buddy - change if you want
+        img.setImageResource(R.mipmap.ic_launcher);
+        floatingView = img;
 
-            floatingView.setOnTouchListener(new View.OnTouchListener() {
-                private int initialX, initialY;
-                private float initialTouchX, initialTouchY;
-                @Override
-                public boolean onTouch(View v, MotionEvent event) {
-                    switch (event.getAction()) {
-                        case MotionEvent.ACTION_DOWN:
-                            initialX = params.x;
-                            initialY = params.y;
-                            initialTouchX = event.getRawX();
-                            initialTouchY = event.getRawY();
-                            return true;
-                        case MotionEvent.ACTION_MOVE:
-                            params.x = initialX + (int)(event.getRawX() - initialTouchX);
-                            params.y = initialY + (int)(event.getRawY() - initialTouchY);
-                            windowManager.updateViewLayout(floatingView, params);
-                            return true;
-                    }
-                    return false;
+        params = new WindowManager.LayoutParams(
+            280, 280,
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            // NOT_FOCUSABLE blocks taps - use NOT_TOUCH_MODAL instead
+            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+            PixelFormat.TRANSLUCENT);
+        params.gravity = Gravity.TOP | Gravity.LEFT;
+        params.x = 100;
+        params.y = 200;
+        windowManager.addView(floatingView, params);
+
+        floatingView.setOnTouchListener(new View.OnTouchListener() {
+            private int initialX, initialY;
+            private float initialTouchX, initialTouchY;
+            private long downTime;
+            private boolean moved = false;
+
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        initialX = params.x;
+                        initialY = params.y;
+                        initialTouchX = event.getRawX();
+                        initialTouchY = event.getRawY();
+                        downTime = System.currentTimeMillis();
+                        moved = false;
+                        return true;
+
+                    case MotionEvent.ACTION_MOVE:
+                        int dx = (int)(event.getRawX() - initialTouchX);
+                        int dy = (int)(event.getRawY() - initialTouchY);
+                        if (Math.abs(dx) > 10 || Math.abs(dy) > 10) moved = true;
+                        params.x = initialX + dx;
+                        params.y = initialY + dy;
+                        windowManager.updateViewLayout(floatingView, params);
+                        return true;
+
+                    case MotionEvent.ACTION_UP:
+                        // TAP = didn't move much + quick = OPEN APP
+                        long tapTime = System.currentTimeMillis() - downTime;
+                        if (!moved && tapTime < 300) {
+                            Intent i = new Intent(FloatingBuddy.this, MainActivity.class);
+                            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                            startActivity(i);
+                        }
+                        return true;
                 }
-            });
-        } catch (Exception e) { e.printStackTrace(); }
+                return false;
+            }
+        });
     }
 
     @Override
