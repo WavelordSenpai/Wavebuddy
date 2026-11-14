@@ -31,17 +31,31 @@ jobs:
           npx cap init "Wave Buddy" com.wavelord.wavebuddy --web-dir=www || true
           npx cap add android || true
           npx cap sync android
-          # FIX ICON - use your icon.png for all sizes
+
+          # FIX ICON - use your icon.png for all sizes + kill adaptive default
           if [ -f icon.png ]; then
             for d in mipmap-mdpi mipmap-hdpi mipmap-xhdpi mipmap-xxhdpi mipmap-xxxhdpi; do
               mkdir -p android/app/src/main/res/$d
               cp icon.png android/app/src/main/res/$d/ic_launcher.png
               cp icon.png android/app/src/main/res/$d/ic_launcher_round.png
+              cp icon.png android/app/src/main/res/$d/ic_launcher_foreground.png
             done
+            rm -rf android/app/src/main/res/mipmap-anydpi-v26
           fi
+
+          # FIX OVERLAY - actually copy YOUR java files into the Android project
+          DEST=android/app/src/main/java/com/wavelord/wavebuddy
+          mkdir -p $DEST
+          if [ -d overlay ]; then
+            cp overlay/*.java $DEST/ 2>/dev/null || true
+            ls -l $DEST/
+          fi
+
           # FIX OVERLAY - add Draw over other apps permission
           if [ -f android/app/src/main/AndroidManifest.xml ]; then
             grep -q "SYSTEM_ALERT_WINDOW" android/app/src/main/AndroidManifest.xml || sed -i 's|<application| <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />\n    <application|' android/app/src/main/AndroidManifest.xml
+            # Also register FloatingBuddy service if not there
+            grep -q "FloatingBuddy" android/app/src/main/AndroidManifest.xml || sed -i 's|</application>| <service android:name=".FloatingBuddy" android:exported="false" android:foregroundServiceType="specialUse" />\n    </application>|' android/app/src/main/AndroidManifest.xml
           fi
           cd android
           chmod +x gradlew
