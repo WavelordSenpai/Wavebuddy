@@ -12,6 +12,7 @@ body{background:#0A0A0A;font-family:Inter,Arial,sans-serif;overflow:hidden;heigh
 #room{width:100%;height:100vh;height:100dvh;position:relative;background:radial-gradient(circle at 50% 30%, #1A1505 0%, #0A0A0A 70%);overflow:hidden}
 body.overlay #room{background:transparent}
 body.overlay #hint{display:none}
+html.overlay, body.overlay, body.overlay #room, body.mini-mode, body.mini-mode #room{background:transparent !important;background-image:none !important}
 #buddyWrap{position:absolute;left:50%;top:58%;transform:translate(-50%,-50%);width:140px;height:170px;z-index:15;cursor:grab;touch-action:none}
 #spriteBox{width:130px;height:160px;position:relative;transition:transform .6s;filter:drop-shadow(0 12px 12px rgba(0,0,0,.45))}
 #spriteBox svg{width:130px;height:160px;overflow:visible}
@@ -129,6 +130,7 @@ body.mini-mode #buddyWrap{left:50%;top:140px;transform:translate(-50%,-50%)}
 #miniOptions.show{display:flex}
 #miniTalkBtn{background:#FFD700;color:#000;font-weight:900;font-size:11px;padding:9px 12px;border-radius:999px;border:none;cursor:pointer;white-space:nowrap}
 #miniHomeBtn{background:#fff;color:#000;font-weight:900;font-size:11px;padding:9px 12px;border-radius:999px;border:none;cursor:pointer;white-space:nowrap}
+#miniExitBtn{background:#FF4757;color:#fff;font-weight:900;font-size:11px;padding:9px 12px;border-radius:999px;border:none;cursor:pointer;white-space:nowrap}
 #miniChat{display:none;position:absolute;top:320px;left:50%;transform:translateX(-50%);width:min(284px,92vw);max-width:92vw;background:#1E1E1E;border:2px solid #FFD700;border-radius:14px;padding:8px;z-index:50;box-sizing:border-box;touch-action:none}
 #miniChat.open{display:block}
 #miniChatHeader{display:flex;justify-content:space-between;align-items:center;gap:6px;padding:2px 2px 6px 2px}
@@ -144,8 +146,9 @@ body.mini-mode #chatPanel,body.mini-mode #hint{display:none!important}
 #landing h1{color:#fff;font-size:22px;font-weight:900}
 #landing h1 span{color:#FFD700}
 #landing p{color:#BBB;font-size:12px;line-height:1.5;margin:6px 12px 8px}
-#landingBtns{display:flex;gap:8px;justify-content:center;pointer-events:auto}
+#landingBtns{display:flex;gap:8px;justify-content:center;pointer-events:auto;flex-wrap:wrap}
 #talkHeroBtn{background:#FFD700;color:#000;border:none;padding:10px 16px;border-radius:999px;font-weight:900;font-size:13px;cursor:pointer}
+#exitHeroBtn{background:#FF4757;color:#fff;border:none;padding:10px 16px;border-radius:999px;font-weight:900;font-size:13px;cursor:pointer}
 #friendChips{display:flex;gap:5px;justify-content:center;flex-wrap:wrap;margin-top:10px;pointer-events:auto}
 .friendChip{background:#222;color:#fff;border:1px solid #555;padding:6px 10px;border-radius:999px;font-size:11px;font-weight:800;cursor:pointer}
 .friendChip.active{background:#FFD700;color:#000;border-color:#FFD700}
@@ -161,7 +164,7 @@ body.chatting #hint{opacity:0!important}
   <div id="landing">
     <h1>Welcome to <span>Wave Buddy</span> 👋</h1>
     <p>Your AI friend that floats with you everywhere.<br>Chat, remember stuff, set reminders — with Tetra, Cube, Crystal, Dodeca, Icosa & Robo.</p>
-    <div id="landingBtns"><button id="talkHeroBtn" onclick="openChat()">💬 TALK TO AI</button></div>
+    <div id="landingBtns"><button id="talkHeroBtn" onclick="openChat()">💬 TALK TO AI</button><button id="exitHeroBtn" onclick="sayGoodbye(event)">👋 SAY GOODBYE / EXIT</button></div>
     <div id="friendChips">
       <button class="friendChip" onclick="setAvatar('tetra')">🔺 Tetra</button>
       <button class="friendChip" onclick="setAvatar('cube')">🧊 Cube</button>
@@ -181,7 +184,8 @@ body.chatting #hint{opacity:0!important}
     <div id="moodDot">● idle</div>
     <div id="miniOptions">
       <button id="miniTalkBtn" onclick="onMiniTalk(event)">💬 AI TALK</button>
-      <button id="miniHomeBtn" onclick="tryExpandFromDemo(event)">🏠 BACK HOME</button>
+      <button id="miniHomeBtn" onclick="tryExpandFromDemo(event)">🏠 HOME</button>
+      <button id="miniExitBtn" onclick="sayGoodbye(event)">👋 BYE</button>
     </div>
   </div>
   <div id="miniChat" onclick="event.stopPropagation()">
@@ -201,11 +205,12 @@ var AI_URL='https://wavebuddy.netlify.app/.netlify/functions/ai';
 var AVATAR_ORDER=['tetra','cube','crystal','dodeca','icosa','robot'];
 var currentAvatarKey='crystal'; var lastBuddyText='Hey! What do you need?'; var lastUserText=''; var isChatting=false; var chatLockUntil=0; var isDragging=false; var didLongPress=false; var idleTimer=null; var zzzInterval=null; var eyeMoveInterval=null; var lastMoveIndex=-1;
 var IS_MINI=window.location.search.indexOf('mode=mini')!==-1;
-if(window.location.search.indexOf('overlay=1')!==-1){document.body.classList.add('overlay');}
-if(IS_MINI){document.body.classList.add('overlay');document.body.classList.add('mini-mode');}
+if(window.location.search.indexOf('overlay=1')!==-1){document.body.classList.add('overlay');document.documentElement.classList.add('overlay');}
+if(IS_MINI){document.body.classList.add('overlay');document.documentElement.classList.add('overlay');document.body.classList.add('mini-mode');}
 function isMiniMode(){return document.body.classList.contains('mini-mode')||IS_MINI;}
 function tryMinimize(e){if(e)e.stopPropagation();if(window.AndroidMini&&window.AndroidMini.minimize){try{window.AndroidMini.minimize();}catch(err){}}document.body.classList.add('mini-mode');var wrap=document.getElementById('buddyWrap');wrap.style.left='50%';wrap.style.top='140px';wrap.style.transform='translate(-50%,-50%)';var mo=document.getElementById('miniOptions');if(mo)mo.classList.remove('show');if(isChatting){try{closeChat();}catch(err){}}}
 function tryExpandFromDemo(e){if(e)e.stopPropagation();if(window.AndroidMini&&window.AndroidMini.expand){try{window.AndroidMini.expand();}catch(err){}}document.body.classList.remove('mini-mode');var wrap=document.getElementById('buddyWrap');wrap.style.left='50%';wrap.style.top='58%';wrap.style.transform='translate(-50%,-50%)';var mc=document.getElementById('miniChat');if(mc)mc.classList.remove('open');var mo=document.getElementById('miniOptions');if(mo)mo.classList.remove('show');}
+function sayGoodbye(e){if(e)e.stopPropagation();showThought('👋 Bye! See you soon!');setSpriteState('wavingSlow',1500,'happy');setTimeout(function(){if(window.AndroidMini&&window.AndroidMini.exit){try{window.AndroidMini.exit();return;}catch(err){}}try{window.close();}catch(err){}document.body.innerHTML='<div style="background:#0A0A0A;color:#fff;height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;font-family:Arial;padding:20px"><div><div style="font-size:48px">👋</div><h2>Bye! See you soon!</h2><p>Wave Buddy has gone to sleep.</p></div></div>';},900);}
 function onBuddyTap(e){if(e)e.stopPropagation();if(e.target&&e.target.closest&&e.target.closest('#miniChat'))return;if(isMiniMode()){var mo=document.getElementById('miniOptions');if(!mo)return;var mc=document.getElementById('miniChat');if(mc&&mc.classList.contains('open')){return;}mo.classList.toggle('show');setTimeout(function(){if(mo)mo.classList.remove('show');},5000);return;}openChat();}
 function onMiniTalk(e){if(e)e.stopPropagation();var mo=document.getElementById('miniOptions');if(mo)mo.classList.remove('show');toggleMiniChat(e);}
 function loadMemory(){var m=null;try{m=JSON.parse(localStorage.getItem('waveBuddyMemory')||'null');}catch(e){}if(!m){try{m=JSON.parse(sessionStorage.getItem('waveBuddyMemory')||'null');}catch(e){}}if(!m&&window.__WB_MEMORY)m=window.__WB_MEMORY;if(!m)m={};return m;}
@@ -318,4 +323,4 @@ setAvatar(currentAvatarKey);
 scheduleIdle();
 </script>
 </body>
-  </html>
+</html>
