@@ -20,7 +20,6 @@ public class MainActivity extends Activity {
         if(clean.length() > 250) clean = clean.substring(0, 250);
         final String toSay = clean;
         runOnUiThread(() -> {
-            // DEBUG: you should SEE this toast every time you tap 🔊
             Toast.makeText(MainActivity.this, "Speaking: " + toSay.substring(0, Math.min(30, toSay.length())), Toast.LENGTH_SHORT).show();
             try{
                 if(tts == null){
@@ -91,6 +90,7 @@ public class MainActivity extends Activity {
         web.loadUrl("file:///android_asset/public/index.html");
         setContentView(web);
     }
+    @Override protected void onResume(){ super.onResume(); try{ stopService(new Intent(this, FloatingBuddy.class)); }catch(Exception ignored){} }
     @Override protected void onActivityResult(int c, int r, Intent d) { super.onActivityResult(c,r,d); }
     @Override protected void onNewIntent(Intent i){ super.onNewIntent(i); if(web != null) web.evaluateJavascript("document.body.classList.remove('mini-mode')", null); }
     @Override protected void onDestroy(){ super.onDestroy(); try{ if(tts != null){ tts.stop(); tts.shutdown(); } }catch(Exception ignored){} if(web != null) web.destroy(); }
