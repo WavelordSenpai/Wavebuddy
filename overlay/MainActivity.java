@@ -1,13 +1,13 @@
 package com.wavelord.wavebuddy;
 
+import android.app.Activity;
 import android.os.Bundle;
 import android.webkit.WebView;
 import android.webkit.WebSettings;
 import android.webkit.WebViewClient;
 import android.content.Intent;
-import androidx.appcompat.app.AppCompatActivity;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -15,10 +15,16 @@ public class MainActivity extends AppCompatActivity {
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
+        s.setAllowFileAccess(true);
+        s.setAllowContentAccess(true);
         web.setWebViewClient(new WebViewClient(){
             @Override public boolean shouldOverrideUrlLoading(WebView v, String url){
                 if(url.equals("wavebuddy://minimize")){
-                    startService(new Intent(MainActivity.this, FloatingBuddy.class));
+                    try {
+                        Intent svc = new Intent(MainActivity.this, FloatingBuddy.class);
+                        // Android 12+ needs this, not startService()
+                        startForegroundService(svc);
+                    } catch (Exception e) {}
                     finish();
                     return true;
                 }
