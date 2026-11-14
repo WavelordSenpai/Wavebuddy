@@ -129,16 +129,16 @@ body.mini-mode #buddyWrap{left:50%;top:140px;transform:translate(-50%,-50%)}
 #miniOptions.show{display:flex}
 #miniTalkBtn{background:#FFD700;color:#000;font-weight:900;font-size:11px;padding:9px 12px;border-radius:999px;border:none;cursor:pointer;white-space:nowrap}
 #miniHomeBtn{background:#fff;color:#000;font-weight:900;font-size:11px;padding:9px 12px;border-radius:999px;border:none;cursor:pointer;white-space:nowrap}
-#miniChat{display:none;position:absolute;top:150px;left:50%;transform:translateX(-50%);width:min(284px,92vw);max-width:92vw;background:#1E1E1E;border:2px solid #FFD700;border-radius:14px;padding:8px;z-index:99999;box-sizing:border-box}
+#miniChat{display:none;position:absolute;top:320px;left:50%;transform:translateX(-50%);width:min(284px,92vw);max-width:92vw;background:#1E1E1E;border:2px solid #FFD700;border-radius:14px;padding:8px;z-index:50;box-sizing:border-box;touch-action:none}
 #miniChat.open{display:block}
 #miniChatHeader{display:flex;justify-content:space-between;align-items:center;gap:6px;padding:2px 2px 6px 2px}
 #miniChatDrag{flex:1;cursor:grab;touch-action:none;padding:6px;text-align:left;font-size:10px;color:#FFD700;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#miniChatClose{background:#FF4757;color:#fff;border:0;width:30px;height:30px;min-width:30px;border-radius:50%;font-size:14px;cursor:pointer;flex-shrink:0}
-#miniChatLog{max-height:130px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin-bottom:6px}
+#miniChatClose{background:#FF4757;color:#fff;border:0;width:30px;height:30px;min-width:30px;border-radius:50%;font-size:14px;cursor:pointer;flex-shrink:0;touch-action:manipulation}
+#miniChatLog{max-height:130px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin-bottom:6px;touch-action:pan-y}
 #miniChatRow{display:flex;gap:5px;width:100%;box-sizing:border-box;flex-wrap:nowrap;align-items:center}
-#miniChatInput{flex:1 1 0;min-width:0;padding:9px 8px;border-radius:8px;border:1px solid #555;background:#111;color:#fff;font-size:12px;box-sizing:border-box}
-#miniChatSend{flex:0 0 48px;width:48px;padding:9px 0;border-radius:8px;border:0;background:#FFD700;color:#000;font-weight:900;font-size:11px;cursor:pointer;text-align:center;box-sizing:border-box}
-#miniSpeakBtn{flex:0 0 36px;width:36px;height:36px;min-width:36px;padding:0;border-radius:8px;border:1px solid #FFD700;background:#222;color:#fff;cursor:pointer;font-size:16px;line-height:36px;text-align:center;box-sizing:border-box}
+#miniChatInput{flex:1 1 0;min-width:0;padding:9px 8px;border-radius:8px;border:1px solid #555;background:#111;color:#fff;font-size:12px;box-sizing:border-box;touch-action:manipulation}
+#miniChatSend{flex:0 0 48px;width:48px;padding:9px 0;border-radius:8px;border:0;background:#FFD700;color:#000;font-weight:900;font-size:11px;cursor:pointer;text-align:center;box-sizing:border-box;touch-action:manipulation}
+#miniSpeakBtn{flex:0 0 36px;width:36px;height:36px;min-width:36px;padding:0;border-radius:8px;border:1px solid #FFD700;background:#222;color:#fff;cursor:pointer;font-size:16px;line-height:36px;text-align:center;box-sizing:border-box;touch-action:manipulation}
 body.mini-mode #chatPanel,body.mini-mode #hint{display:none!important}
 #landing{position:absolute;top:52px;left:12px;right:12px;z-index:90;text-align:center;pointer-events:none}
 #landing h1{color:#fff;font-size:22px;font-weight:900}
@@ -183,11 +183,11 @@ body.chatting #hint{opacity:0!important}
       <button id="miniTalkBtn" onclick="onMiniTalk(event)">💬 AI TALK</button>
       <button id="miniHomeBtn" onclick="tryExpandFromDemo(event)">🏠 BACK HOME</button>
     </div>
-    <div id="miniChat" onclick="event.stopPropagation()">
-      <div id="miniChatHeader"><div id="miniChatDrag">↕ DRAG ME TO MOVE</div><button id="miniChatClose" onclick="event.stopPropagation(); closeMiniChat()">✕</button></div>
-      <div id="miniChatLog"><div class="wb-msg buddy">Hey! I'm here 💬</div></div>
-      <div id="miniChatRow"><input id="miniChatInput" placeholder="Talk to me..." onclick="event.stopPropagation()" onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()"><button id="miniChatSend" onclick="event.stopPropagation(); sendMiniChat()">Send</button><button id="miniSpeakBtn" onclick="event.stopPropagation(); speakText()" title="Hear it">🔊</button></div>
-    </div>
+  </div>
+  <div id="miniChat" onclick="event.stopPropagation()">
+    <div id="miniChatHeader"><div id="miniChatDrag">↕ DRAG ME TO MOVE</div><button id="miniChatClose" onclick="event.stopPropagation(); closeMiniChat()">✕</button></div>
+    <div id="miniChatLog"><div class="wb-msg buddy">Hey! I'm here 💬</div></div>
+    <div id="miniChatRow"><input id="miniChatInput" placeholder="Talk to me..." onclick="event.stopPropagation()" onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()"><button id="miniChatSend" onclick="event.stopPropagation(); sendMiniChat()">Send</button><button id="miniSpeakBtn" onclick="event.stopPropagation(); speakText()" title="Hear it">🔊</button></div>
   </div>
   <div id="chatPanel">
     <div id="chatHeader"><div id="chatDragZone"><b id="chatTitle">💬 Crystal Buddy</b><span id="chatSubtitle">↕ Drag to move</span></div><button id="closeBtn">✕</button></div>
@@ -254,7 +254,7 @@ function playAllMoves(){var moves=[['wavingSlow',1600,'happy','👋'],['thumbsUp
 async function askBuddy(userText){var lower=userText.toLowerCase();if(lower.includes('show me all moves')||lower.includes('do all moves')||lower.includes('demo mode')){playAllMoves();return;}var sm=lower.match(/(?:switch to|become|turn into|i want|use)\s+(tetra|cube|crystal|dodeca|icosa|robo|robot|octa)/);if(sm){var map={octa:'crystal',robot:'robot'};var want=map[sm[1]]||sm[1];if(AVATARS[want]){setAvatar(want);addMsg('buddy','Switched! I am '+AVATARS[want].name+' now.');return;}}if(lower.includes('my name')||lower.includes('who am i')){var jl=learnFromMessage(userText);if(jl.name){addMsg('buddy','Got it, '+jl.name+'! Saved.');return;}if(memory.name){addMsg('buddy','Your name is '+memory.name+'!');return;}addMsg('buddy','I don\'t know your name yet - say "hey im..."');return;}if(lower.includes('what do you remember')){var all=[];if(memory.name)all.push('Your name is '+memory.name);if(memory.facts.length)all=all.concat(memory.facts);addMsg('buddy',all.length?'Here is what I remembered:<br>• '+all.join('<br>• '):'Nothing yet.');return;}if(lower.includes('my reminders')){var p=memory.reminders.filter(function(r){return !r.done;});addMsg('buddy',p.length?'Your reminders: '+p.map(function(r){return '• '+r.text;}).join('<br>'):'No reminders.');return;}if(lower.includes('clear reminders')){memory.reminders=[];saveMemory(memory);addMsg('buddy','Cleared all reminders.');return;}if(lower.includes('forget everything')){memory.name=null;memory.facts=[];saveMemory(memory);addMsg('buddy','Okay, forgot everything.');return;}var rem=parseReminder(userText);if(rem){memory.reminders.push({text:rem.text,time:rem.time,done:false});saveMemory(memory);addMsg('buddy','Got it! I will remind you to '+rem.text.charAt(0).toLowerCase()+rem.text.slice(1)+' in '+formatDelay(rem.delay)+'.');showCaption('⏰ Reminder set: '+rem.text,5000);return;}var learned=learnFromMessage(userText);if(learned.fact){addMsg('buddy','Got it'+(memory.name?', '+memory.name:'')+' - locked in: "'+learned.fact+'".');memory.chatCount++;saveMemory(memory);return;}if(learned.name){addMsg('buddy','Nice to meet you, '+learned.name+'!');memory.chatCount++;saveMemory(memory);return;}memory.chatCount++;saveMemory(memory);var box=document.getElementById('spriteBox');box.classList.add('talking');setEmotion('happy');addMsg('buddy','🤔 Thinking...');var th=document.getElementById('chatLog').lastChild;try{var res=await fetch(AI_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:getSystemPrompt()+'\n\nUser: '+userText+'\nBuddy:'})});if(!res.ok)throw new Error('AI');var data=await res.json();var ans=data.answer||data.text||'';if(!ans)throw new Error('empty');th.remove();addMsg('buddy',ans);showThought('💬');}catch(e){th.remove();addMsg('buddy',localFallbackAnswer(userText));}box.classList.remove('talking');setEmotion('idle');}
 function sendChat(){var inp=document.getElementById('chatInput');var t=inp.value.trim();if(!t)return;addMsg('you',t);inp.value='';askBuddy(t);}
 function positionChat(){var p=document.getElementById('chatPanel');p.style.left='50%';p.style.top='50%';p.style.transform='translate(-50%,-50%)';}
-function toggleMiniChat(e){if(e)e.stopPropagation();var c=document.getElementById('miniChat');var wasOpen=c.classList.contains('open');if(wasOpen){c.classList.remove('open');return;}c.classList.add('open');c.style.left='50%';c.style.top='150px';c.style.transform='translateX(-50%)';setTimeout(function(){var i=document.getElementById('miniChatInput');if(i)i.focus();},100);}
+function toggleMiniChat(e){if(e)e.stopPropagation();var c=document.getElementById('miniChat');var wasOpen=c.classList.contains('open');if(wasOpen){c.classList.remove('open');return;}c.classList.add('open');c.style.left='50%';c.style.top='320px';c.style.transform='translateX(-50%)';setTimeout(function(){var i=document.getElementById('miniChatInput');if(i)i.focus();},100);}
 function closeMiniChat(){var c=document.getElementById('miniChat');c.classList.remove('open');}
 function sendMiniChat(){var inp=document.getElementById('miniChatInput');var txt=inp.value.trim();if(!txt)return;var log=document.getElementById('miniChatLog');var you=document.createElement('div');you.className='wb-msg you';you.textContent=txt;log.appendChild(you);inp.value='';inp.focus();var before=document.getElementById('chatLog').children.length;askBuddy(txt);setTimeout(function(){var cl=document.getElementById('chatLog');for(var i=before;i<cl.children.length;i++){var b=document.createElement('div');b.className='wb-msg buddy';b.innerHTML=cl.children[i].innerHTML;log.appendChild(b);}log.scrollTop=log.scrollHeight;var ii=document.getElementById('miniChatInput');if(ii)ii.focus();},1500);}
 function openChat(){if(isMiniMode()){toggleMiniChat();return;}if(isChatting)return;if(Date.now()<chatLockUntil)return;chatLockUntil=Date.now()+400;isChatting=true;document.body.classList.add('chatting');positionChat();document.getElementById('chatPanel').classList.add('open');var tc=getTimeContext();var greet=memory.name?tc.greeting+', '+memory.name+'!':tc.greeting+'!';setEmotion('happy');var lines=[greet+' What do you need?','Yo! I was just chilling. What is up?','You tapped me! What do you want?'];addMsg('buddy',lines[Math.floor(Math.random()*lines.length)]);setTimeout(function(){var inp=document.getElementById('chatInput');if(inp)inp.focus();},100);}
@@ -279,8 +279,8 @@ if('speechSynthesis' in window){speechSynthesis.getVoices();speechSynthesis.onvo
   function miniDown(e){var p=getP(e);startX=p.clientX;startY=p.clientY;var r=miniChatEl.getBoundingClientRect();startLeft=r.left;startTop=r.top;miniChatEl.style.left=r.left+'px';miniChatEl.style.top=r.top+'px';miniChatEl.style.transform='none';draggingMini=true;moved=false;e.preventDefault();e.stopPropagation();}
   function onMove(e){
     var p=getP(e);var dx=p.clientX-startX,dy=p.clientY-startY;
-    if(draggingChat){if(Math.abs(dx)>4||Math.abs(dy)>4)moved=true;panel.style.left=Math.max(4,Math.min(window.innerWidth-(panel.offsetWidth||300)-4,startLeft+dx))+'px';panel.style.top=Math.max(4,Math.min(window.innerHeight-120,startTop+dy))+'px';panel.style.transform='none';if(e.cancelable)e.preventDefault();return;}
     if(draggingMini){if(Math.abs(dx)>4||Math.abs(dy)>4)moved=true;miniChatEl.style.left=Math.max(4,Math.min(window.innerWidth-(miniChatEl.offsetWidth||284)-4,startLeft+dx))+'px';miniChatEl.style.top=Math.max(60,Math.min(window.innerHeight-80,startTop+dy))+'px';miniChatEl.style.transform='none';if(e.cancelable)e.preventDefault();return;}
+    if(draggingChat){if(Math.abs(dx)>4||Math.abs(dy)>4)moved=true;panel.style.left=Math.max(4,Math.min(window.innerWidth-(panel.offsetWidth||300)-4,startLeft+dx))+'px';panel.style.top=Math.max(4,Math.min(window.innerHeight-120,startTop+dy))+'px';panel.style.transform='none';if(e.cancelable)e.preventDefault();return;}
     if(!draggingBuddy)return;
     if(Math.abs(dx)>6||Math.abs(dy)>6){moved=true;isDragging=true;clearTimeout(pressTimer);}
     if(moved){
@@ -304,7 +304,6 @@ if('speechSynthesis' in window){speechSynthesis.getVoices();speechSynthesis.onvo
   document.addEventListener('touchend',onUp);document.addEventListener('mouseup',onUp);
   dragZone.addEventListener('touchstart',chatDown,{passive:false});dragZone.addEventListener('mousedown',chatDown);
   miniDrag.addEventListener('touchstart',miniDown,{passive:false});miniDrag.addEventListener('mousedown',miniDown);
-  miniChatEl.addEventListener('click',function(e){e.stopPropagation();});
   miniChatEl.addEventListener('touchstart',function(e){e.stopPropagation();},{passive:true});
   miniChatEl.addEventListener('mousedown',function(e){e.stopPropagation();});
   document.getElementById('closeBtn').onclick=function(e){e.stopPropagation();closeChat();};
@@ -319,4 +318,4 @@ setAvatar(currentAvatarKey);
 scheduleIdle();
 </script>
 </body>
-</html>
+  </html>
