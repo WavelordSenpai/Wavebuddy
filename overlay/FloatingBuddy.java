@@ -66,7 +66,7 @@ public class FloatingBuddy extends Service {
         params.x = screenW - 340;
         params.y = 400;
 
-        // TAP vs DRAG - this is the whole fix
+        // TAP vs DRAG - tap = open pill, drag = move window
         web.setOnTouchListener(new View.OnTouchListener(){
             @Override public boolean onTouch(View v, MotionEvent e){
                 switch(e.getAction()){
@@ -142,15 +142,18 @@ public class FloatingBuddy extends Service {
         }
         @JavascriptInterface public void testVoice(){ speak("Hello! This is Wave Buddy. Can you hear me now?"); }
         @JavascriptInterface public void setWindowSize(final int w, final int h){
-            // Keep size fixed at 320x280 - resizing was causing the jump/slide
-            // Only toggle focus so keyboard works when chat opens
-            if(w > 250 && !chatOpen){
-                chatOpen = true;
-                new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> updateFocus());
-            } else if(w <= 250 && chatOpen){
-                chatOpen = false;
-                new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> updateFocus());
-            }
+            // FIXED: grow taller for chat in place - NEVER move X/Y, NEVER recenter
+            new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
+                try{
+                    chatOpen = (w > 250);
+                    params.width = w; params.height = h;
+                    // Only keep it on screen vertically, don't touch params.x
+                    if(params.y + h > screenH) params.y = screenH - h;
+                    if(params.y < 0) params.y = 0;
+                    wm.updateViewLayout(web, params);
+                    updateFocus();
+                }catch(Exception ignored){}
+            });
         }
     }
 
