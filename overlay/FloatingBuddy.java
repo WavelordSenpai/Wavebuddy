@@ -14,10 +14,12 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.speech.tts.TextToSpeech;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import java.util.Locale;
 
 public class FloatingBuddy extends Service {
-
     private WindowManager wm;
     private WindowManager.LayoutParams params;
     private WebView web;
@@ -27,22 +29,37 @@ public class FloatingBuddy extends Service {
     private int startX = 0, startY = 0;
     private int screenW = 1080, screenH = 1920;
     private boolean chatOpen = false;
-
     @Override public IBinder onBind(Intent intent) { return null; }
-
     @Override public void onCreate() {
         super.onCreate();
+        try {
+            String chId = "wavebuddy_floating";
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                NotificationChannel ch = new NotificationChannel(chId, "Wave Buddy", NotificationManager.IMPORTANCE_LOW);
+                NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+                if (nm != null) nm.createNotificationChannel(ch);
+            }
+            Notification n;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                n = new Notification.Builder(this, chId).setContentTitle("Wave Buddy").setContentText("Buddy is floating").setSmallIcon(android.R.drawable.ic_dialog_info).build();
+            } else {
+                n = new Notification.Builder(this).setContentTitle("Wave Buddy").setContentText("Buddy is floating").setSmallIcon(android.R.drawable.ic_dialog_info).build();
+            }
+            if (Build.VERSION.SDK_INT >= 29) {
+                startForeground(1, n, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
+            } else {
+                startForeground(1, n);
+            }
+        } catch (Exception ignored) {}
         wm = (WindowManager) getSystemService(WINDOW_SERVICE);
         screenW = getResources().getDisplayMetrics().widthPixels;
         screenH = getResources().getDisplayMetrics().heightPixels;
-
         web = new WebView(this);
         web.getSettings().setJavaScriptEnabled(true);
         web.getSettings().setDomStorageEnabled(true);
         web.getSettings().setMediaPlaybackRequiresUserGesture(false);
         web.setBackgroundColor(android.graphics.Color.TRANSPARENT);
         web.addJavascriptInterface(new MiniBridge(), "AndroidMini");
-
         web.setWebViewClient(new WebViewClient(){
             @Override public void onPageFinished(WebView view, String url){
                 super.onPageFinished(view, url);
@@ -51,21 +68,15 @@ public class FloatingBuddy extends Service {
             @Override public boolean shouldOverrideUrlLoading(WebView v, String u){ return false; }
             @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r){ return false; }
         });
-
         web.loadUrl("file:///android_asset/public/index.html?mode=mini&overlay=1");
-
-        int type = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
-            ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-            : WindowManager.LayoutParams.TYPE_PHONE;
-
+        int type = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_PHONE;
         params = new WindowManager.LayoutParams(
-    180, 220, type,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+            180, 200, type,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
             PixelFormat.TRANSLUCENT);
         params.gravity = Gravity.TOP | Gravity.LEFT;
         params.x = screenW - 340;
         params.y = 400;
-
         web.setOnTouchListener(new View.OnTouchListener(){
             @Override public boolean onTouch(View v, MotionEvent e){
                 switch(e.getAction()){
@@ -102,16 +113,13 @@ public class FloatingBuddy extends Service {
                 return false;
             }
         });
-
         try{ wm.addView(web, params); }catch(Exception ignored){}
-
         tts = new TextToSpeech(this, status -> {
             if(status == TextToSpeech.SUCCESS){
                 try{ tts.setLanguage(Locale.US); }catch(Exception ignored){}
             }
         });
     }
-
     private void openApp(){
         try{
             Intent i = new Intent(this, MainActivity.class);
@@ -120,7 +128,6 @@ public class FloatingBuddy extends Service {
         }catch(Exception ignored){}
         stopSelf();
     }
-
     private void updateFocus(){
         try{
             if(chatOpen) params.flags &= ~WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
@@ -128,7 +135,6 @@ public class FloatingBuddy extends Service {
             wm.updateViewLayout(web, params);
         }catch(Exception ignored){}
     }
-
     public class MiniBridge {
         @JavascriptInterface public void minimize(){}
         @JavascriptInterface public void expand(){ openApp(); }
@@ -150,7 +156,6 @@ public class FloatingBuddy extends Service {
             });
         }
     }
-
     @Override public void onDestroy(){
         super.onDestroy();
         try{ if(tts != null){ tts.stop(); tts.shutdown(); } }catch(Exception ignored){}
