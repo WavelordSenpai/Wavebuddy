@@ -13,7 +13,7 @@ body{background:#0A0A0A;font-family:Inter,Arial,sans-serif;overflow:hidden;heigh
 body.overlay #room{background:transparent}
 body.overlay #hint{display:none}
 html.overlay, body.overlay, body.overlay #room, body.mini-mode, body.mini-mode #room{background:transparent !important;background-image:none !important}
-#buddyWrap{position:absolute;left:50%;top:58%;transform:translate(-50%,-50%);width:140px;height:170px;z-index:15;cursor:grab;touch-action:none}
+#buddyWrap{position:absolute;left:50%;top:58%;transform:translate(-50%,-50%);width:140px;height:170px;z-index:15;cursor:grab;touch-action:manipulation}
 #spriteBox{width:130px;height:160px;position:relative;transition:transform .6s;filter:drop-shadow(0 12px 12px rgba(0,0,0,.45))}
 #spriteBox svg{width:130px;height:160px;overflow:visible}
 #spriteBox .body{transform-origin:50% 50%;transform-box:fill-box;transition:transform .6s}
@@ -133,7 +133,7 @@ body.mini-mode #miniOptions{bottom:-30px!important;gap:4px!important;flex-wrap:n
 #miniTalkBtn{background:#FFD700;color:#000;font-weight:900;font-size:10px;padding:8px 8px;border-radius:999px;border:none;cursor:pointer;white-space:nowrap}
 #miniHomeBtn{background:#fff;color:#000;font-weight:900;font-size:10px;padding:8px 8px;border-radius:999px;border:none;cursor:pointer;white-space:nowrap}
 #miniExitBtn{background:#FF4757;color:#fff;font-weight:900;font-size:10px;padding:8px 8px;border-radius:999px;border:none;cursor:pointer;white-space:nowrap}
-#miniChat{display:none;position:absolute;top:320px;left:50%;transform:translateX(-50%);width:min(284px,92vw);max-width:92vw;background:#1E1E1E;border:2px solid #FFD700;border-radius:14px;padding:8px;z-index:50;box-sizing:border-box;touch-action:none}
+#miniChat{display:none;position:absolute;top:320px;left:50%;transform:translateX(-50%);width:min(284px,92vw);max-width:92vw;background:#1E1E1E;border:2px solid #FFD700;border-radius:14px;padding:8px;z-index:50;box-sizing:border-box;touch-action:manipulation}
 #miniChat.open{display:block}
 #miniChatHeader{display:flex;justify-content:space-between;align-items:center;gap:6px;padding:2px 2px 6px 2px}
 #miniChatDrag{flex:1;cursor:grab;touch-action:none;padding:6px;text-align:left;font-size:10px;color:#FFD700;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -278,9 +278,10 @@ if('speechSynthesis' in window){speechSynthesis.getVoices();speechSynthesis.onvo
     if(e.target.closest&&e.target.closest('#miniOptions'))return;
     if(e.target.closest&&e.target.closest('#landing'))return;
     if(e.target.closest&&e.target.closest('#chatPanel'))return;
+    if(isMiniMode()){return;}
     var p=getP(e);startX=p.clientX;startY=p.clientY;lastMoveX=p.clientX;lastMoveY=p.clientY;downTime=Date.now();var r=wrap.getBoundingClientRect();startLeft=r.left;startTop=r.top;moved=false;isDragging=false;didLongPress=false;draggingBuddy=true;
-    if(!isMiniMode() && document.getElementById('spriteBox').className.indexOf('sleeping')!==-1){setSpriteState('popping',900,'surprised');showThought('😳 Awake!');}
-    if(!isMiniMode()){pressTimer=setTimeout(function(){didLongPress=true;swapNextAvatar();if(navigator.vibrate)navigator.vibrate(50);},800);}
+    if(document.getElementById('spriteBox').className.indexOf('sleeping')!==-1){setSpriteState('popping',900,'surprised');showThought('😳 Awake!');}
+    pressTimer=setTimeout(function(){didLongPress=true;swapNextAvatar();if(navigator.vibrate)navigator.vibrate(50);},800);
   }
   function chatDown(e){var p=getP(e);startX=p.clientX;startY=p.clientY;var r=panel.getBoundingClientRect();startLeft=r.left;startTop=r.top;draggingChat=true;moved=false;e.preventDefault();e.stopPropagation();}
   function miniDown(e){var p=getP(e);startX=p.clientX;startY=p.clientY;var r=miniChatEl.getBoundingClientRect();startLeft=r.left;startTop=r.top;miniChatEl.style.left=r.left+'px';miniChatEl.style.top=r.top+'px';miniChatEl.style.transform='none';draggingMini=true;moved=false;e.preventDefault();e.stopPropagation();}
@@ -291,18 +292,7 @@ if('speechSynthesis' in window){speechSynthesis.getVoices();speechSynthesis.onvo
     if(!draggingBuddy)return;
     if(Math.abs(dx)>6||Math.abs(dy)>6){moved=true;isDragging=true;clearTimeout(pressTimer);}
     if(moved){
-      if(isMiniMode()){
-        if(window.AndroidMini&&window.AndroidMini.moveWindow){
-          var stepX=Math.round(p.clientX-lastMoveX);var stepY=Math.round(p.clientY-lastMoveY);
-          lastMoveX=p.clientX;lastMoveY=p.clientY;
-          try{window.AndroidMini.moveWindow(stepX,stepY);}catch(err){}
-        } else {
-          wrap.style.left=Math.max(0,Math.min(window.innerWidth-140,startLeft+dx))+'px';wrap.style.top=Math.max(0,Math.min(window.innerHeight-170,startTop+dy))+'px';wrap.style.transform='none';
-        }
-        if(e.cancelable)e.preventDefault();
-      } else {
-        wrap.style.left=(startLeft+dx)+'px';wrap.style.top=(startTop+dy)+'px';wrap.style.transform='none';if(e.cancelable)e.preventDefault();
-      }
+      wrap.style.left=(startLeft+dx)+'px';wrap.style.top=(startTop+dy)+'px';wrap.style.transform='none';if(e.cancelable)e.preventDefault();
     }
   }
   function onUp(e){clearTimeout(pressTimer);if(draggingChat){draggingChat=false;return;}if(draggingMini){draggingMini=false;return;}if(draggingBuddy){draggingBuddy=false;isDragging=false;if(moved&&!isMiniMode())savePosition();return;}}
@@ -325,4 +315,4 @@ setAvatar(currentAvatarKey);
 scheduleIdle();
 </script>
 </body>
-</html>
+    </html>
