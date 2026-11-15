@@ -316,6 +316,7 @@ if('speechSynthesis' in window){speechSynthesis.getVoices();speechSynthesis.onvo
 })();
 try{var sa=localStorage.getItem('waveBuddyAvatar');if(sa&&AVATARS[sa])currentAvatarKey=sa;}catch(e){}
 setAvatar(currentAvatarKey);
+  window.onBuddyTap = onBuddyTap;
 scheduleIdle();
 </script>
 </body>
