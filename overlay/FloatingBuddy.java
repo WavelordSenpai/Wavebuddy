@@ -25,6 +25,7 @@ public class FloatingBuddy extends Service {
     private WebView web;
     private TextToSpeech tts;
     private boolean dragging = false;
+    private long downTime = 0;
     private float downX = 0, downY = 0;
     private int startX = 0, startY = 0;
     private int screenW = 1080, screenH = 1920;
@@ -60,7 +61,7 @@ public class FloatingBuddy extends Service {
         web.getSettings().setMediaPlaybackRequiresUserGesture(false);
         web.setBackgroundColor(android.graphics.Color.TRANSPARENT);
         web.setBackgroundColor(0);
-web.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        web.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         web.addJavascriptInterface(new MiniBridge(), "AndroidMini");
         web.setWebViewClient(new WebViewClient(){
             @Override public void onPageFinished(WebView view, String url){
@@ -73,7 +74,7 @@ web.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         web.loadUrl("file:///android_asset/public/index.html?mode=mini&overlay=1");
         int type = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_PHONE;
         params = new WindowManager.LayoutParams(
-            180, 200, type,
+            200, 260, type,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
             PixelFormat.TRANSLUCENT);
         params.gravity = Gravity.TOP | Gravity.LEFT;
@@ -84,6 +85,7 @@ web.setLayerType(View.LAYER_TYPE_HARDWARE, null);
                 switch(e.getAction()){
                     case MotionEvent.ACTION_DOWN:
                         dragging = false;
+                        downTime = System.currentTimeMillis();
                         downX = e.getRawX();
                         downY = e.getRawY();
                         startX = params.x;
@@ -110,6 +112,10 @@ web.setLayerType(View.LAYER_TYPE_HARDWARE, null);
                     case MotionEvent.ACTION_CANCEL:
                         boolean wasDragging = dragging;
                         dragging = false;
+                        if(!wasDragging && (System.currentTimeMillis() - downTime) < 400){
+                            try{ web.post(() -> web.evaluateJavascript("if(window.onBuddyTap) onBuddyTap(new Event('tap')); else document.getElementById('buddyWrap').click();", null)); }catch(Exception ignored){}
+                            return false;
+                        }
                         return wasDragging;
                 }
                 return false;
@@ -149,8 +155,14 @@ web.setLayerType(View.LAYER_TYPE_HARDWARE, null);
             new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
                 try{
                     chatOpen = (w > 250);
-                    params.width = w; params.height = h;
-                    if(params.y + h > screenH) params.y = screenH - h;
+                    int nw = w;
+                    int nh = h;
+                    if(!chatOpen){
+                        if(nw < 200) nw = 200;
+                        if(nh < 260) nh = 260;
+                    }
+                    params.width = nw; params.height = nh;
+                    if(params.y + nh > screenH) params.y = screenH - nh;
                     if(params.y < 0) params.y = 0;
                     wm.updateViewLayout(web, params);
                     updateFocus();
