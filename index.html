@@ -8,6 +8,7 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important}
 html,body{background:#0A0A0A}
+html.mini-mode, body.mini-mode, body.mini-mode #room{background:transparent !important;background-image:none !important}
 body{background:#0A0A0A;font-family:Inter,Arial,sans-serif;overflow:hidden;height:100vh;height:100dvh}
 #room{width:100%;height:100vh;height:100dvh;position:relative;background:radial-gradient(circle at 50% 30%, #1A1505 0%, #0A0A0A 70%);overflow:hidden}
 body.overlay #room{background:transparent}
@@ -212,10 +213,17 @@ var AVATAR_ORDER=['tetra','cube','crystal','dodeca','icosa','robot'];
 var currentAvatarKey='crystal'; var lastBuddyText='Hey! What do you need?'; var lastUserText=''; var isChatting=false; var chatLockUntil=0; var isDragging=false; var didLongPress=false; var idleTimer=null; var zzzInterval=null; var eyeMoveInterval=null; var lastMoveIndex=-1;
 var IS_MINI=window.location.search.indexOf('mode=mini')!==-1;
 if(window.location.search.indexOf('overlay=1')!==-1){document.body.classList.add('overlay');document.documentElement.classList.add('overlay');}
-if(IS_MINI){document.body.classList.add('overlay');document.documentElement.classList.add('overlay');document.body.classList.add('mini-mode');setTimeout(function(){if(window.AndroidMini && window.AndroidMini.setWindowSize){try{window.AndroidMini.setWindowSize(180,210);}catch(err){}}},500);}
+if(IS_MINI){document.body.classList.add('overlay');document.documentElement.classList.add('overlay');document.body.classList.add('mini-mode');document.documentElement.classList.add('mini-mode');setTimeout(function(){if(window.AndroidMini && window.AndroidMini.setWindowSize){try{window.AndroidMini.setWindowSize(180,210);}catch(err){}}},500);}
 function isMiniMode(){return document.body.classList.contains('mini-mode')||IS_MINI;}
-function tryMinimize(e){if(e)e.stopPropagation();if(window.AndroidMini&&window.AndroidMini.minimize){try{window.AndroidMini.minimize();}catch(err){}}document.body.classList.add('mini-mode');var wrap=document.getElementById('buddyWrap');wrap.style.left='50%';wrap.style.top='105px';wrap.style.transform='translate(-50%,-50%)';if(isChatting){try{closeChat();}catch(err){}}}
-function tryExpandFromDemo(e){if(e)e.stopPropagation();if(window.AndroidMini&&window.AndroidMini.expand){try{window.AndroidMini.expand();}catch(err){}}document.body.classList.remove('mini-mode');var wrap=document.getElementById('buddyWrap');wrap.style.left='50%';wrap.style.top='58%';wrap.style.transform='translate(-50%,-50%)';var mc=document.getElementById('miniChat');if(mc)mc.classList.remove('open');}
+function tryMinimize(e){
+  if(e) e.stopPropagation();
+  if(isMiniMode()) return;
+  if(window.AndroidMini && window.AndroidMini.minimize){
+    try{ window.AndroidMini.minimize(); return; }catch(err){}
+  }
+  showThought('Minimize needs the Android app');
+}
+function tryExpandFromDemo(e){if(e)e.stopPropagation();if(window.AndroidMini&&window.AndroidMini.expand){try{window.AndroidMini.expand();}catch(err){}}document.body.classList.remove('mini-mode');document.documentElement.classList.remove('mini-mode');var wrap=document.getElementById('buddyWrap');wrap.style.left='50%';wrap.style.top='58%';wrap.style.transform='translate(-50%,-50%)';var mc=document.getElementById('miniChat');if(mc)mc.classList.remove('open');}
 function sayGoodbye(e){if(e)e.stopPropagation();showThought('👋 Bye! See you soon!');setSpriteState('wavingSlow',1500,'happy');setTimeout(function(){if(window.AndroidMini&&window.AndroidMini.exit){try{window.AndroidMini.exit();return;}catch(err){}}try{window.close();}catch(err){}document.body.innerHTML='<div style="background:#0A0A0A;color:#fff;height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;font-family:Arial;padding:20px"><div><div style="font-size:48px">👋</div><h2>Bye! See you soon!</h2><p>Wave Buddy has gone to sleep.</p></div></div>';},900);}
 function onBuddyTap(e){if(e)e.stopPropagation();if(e.target&&e.target.closest&&e.target.closest('#miniChat'))return;if(isMiniMode()){var mo=document.getElementById('miniOptions');if(mo){var willShow=!mo.classList.contains('show');mo.classList.toggle('show');if(window.AndroidMini&&window.AndroidMini.setWindowSize){try{window.AndroidMini.setWindowSize(willShow?320:180,willShow?280:210);}catch(err){}}}return;}openChat();}
 function onMiniTalk(e){if(e)e.stopPropagation();toggleMiniChat(e);}
@@ -317,6 +325,16 @@ if('speechSynthesis' in window){speechSynthesis.getVoices();speechSynthesis.onvo
 try{var sa=localStorage.getItem('waveBuddyAvatar');if(sa&&AVATARS[sa])currentAvatarKey=sa;}catch(e){}
 setAvatar(currentAvatarKey);
 window.onBuddyTap = onBuddyTap;
+document.addEventListener('keydown', function(e){
+  if(e.key === 'Escape' || e.key === 'Backspace'){
+    if(document.body.classList.contains('mini-mode') && !IS_MINI){
+      document.body.classList.remove('mini-mode');
+      document.documentElement.classList.remove('mini-mode');
+      var w = document.getElementById('buddyWrap');
+      w.style.left='50%'; w.style.top='58%'; w.style.transform='translate(-50%,-50%)';
+    }
+  }
+});
 scheduleIdle();
 </script>
 </body>
