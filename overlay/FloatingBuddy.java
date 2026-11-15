@@ -25,7 +25,7 @@ import java.util.Locale;
 public class FloatingBuddy extends Service {
     private WindowManager wm; private View fv; private WindowManager.LayoutParams params; private WebView web; private TextToSpeech tts;
     private int screenW = 1080; private int screenH = 1920;
-    private int initX, initY; private float downX, downY; private boolean dragging = false; private long downTime = 0;
+    private int initX, initY; private float downX, downY; private boolean dragging = false;
     private boolean chatOpen = false;
     private void doSpeak(String t){
         if(t == null) return; String clean = t.replaceAll("<[^>]*>", "").replaceAll("\\s+", " ").trim(); if(clean.isEmpty()) return; if(clean.length()>250) clean = clean.substring(0,250); final String toSay = clean;
@@ -83,7 +83,6 @@ public class FloatingBuddy extends Service {
                         chatOpen = (w > 250);
                         int oldW = params.width;
                         int oldH = params.height;
-                        // KEEP CENTER: when width grows 200 -> 320, move x left by 60 so he stays in place, doesn't jump left
                         int centerX = params.x + oldW / 2;
                         int centerY = params.y + oldH / 2;
                         params.width = w; params.height = h;
@@ -119,13 +118,14 @@ public class FloatingBuddy extends Service {
         params.x = centerX; params.y = 200;
         try { wm.addView(fv, params); } catch (Exception e) {}
 
+        // THE FIX: Android ONLY drags. It NEVER calls onBuddyTap().
+        // Tap = return false, let WebView / JS handle the click.
+        // Drag = return true only AFTER you moved >20px, so WebView gets CANCEL and stops sliding.
         web.setOnTouchListener(new View.OnTouchListener(){
             @Override public boolean onTouch(View v, MotionEvent e){
                 if(e.getAction() == MotionEvent.ACTION_DOWN){
-                    initX = params.x; initY = params.y; downX = e.getRawX(); downY = e.getRawY(); dragging = false; downTime = System.currentTimeMillis();
-                    // If chat is open, let WebView handle buttons/typing. If chat closed, WE own the touch so WebView can't slide him.
-                    if(chatOpen) return false;
-                    return true;
+                    initX = params.x; initY = params.y; downX = e.getRawX(); downY = e.getRawY(); dragging = false;
+                    return false;
                 }
                 if(e.getAction() == MotionEvent.ACTION_MOVE){
                     if(chatOpen) return false;
@@ -137,21 +137,13 @@ public class FloatingBuddy extends Service {
                         try{ wm.updateViewLayout(fv, params); }catch(Exception ignored){}
                         return true;
                     }
-                    return true;
+                    return false;
                 }
                 if(e.getAction() == MotionEvent.ACTION_UP || e.getAction() == MotionEvent.ACTION_CANCEL){
-                    if(chatOpen) return false;
                     boolean wasDragging = dragging;
-                    long tapTime = System.currentTimeMillis() - downTime;
-                    float totalDx = Math.abs(e.getRawX() - downX);
-                    float totalDy = Math.abs(e.getRawY() - downY);
                     dragging = false;
                     if(wasDragging) return true;
-                    if(tapTime < 600 && totalDx < 20 && totalDy < 20){
-                        try{ web.post(() -> { try{ web.evaluateJavascript("if(typeof onBuddyTap==='function'){onBuddyTap({stopPropagation:function(){}})}", null); }catch(Exception ignored){} }); }catch(Exception ignored){}
-                        return true;
-                    }
-                    return true;
+                    return false;
                 }
                 return false;
             }
@@ -166,4 +158,4 @@ public class FloatingBuddy extends Service {
         try { if (fv != null && wm != null) wm.removeView(fv); } catch (Exception e) {}
         try { if(web != null) web.destroy(); } catch(Exception ignored){}
     }
-                       }
+        }
