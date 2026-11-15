@@ -85,11 +85,6 @@ public class FloatingBuddy extends Service {
         params.y = dp(400);
         web.setOnTouchListener(new View.OnTouchListener(){
             @Override public boolean onTouch(View v, MotionEvent e){
-                // FIX: When menu / chat is open, NEVER drag. Let all taps go to buttons.
-                if (chatOpen) {
-                    dragging = false;
-                    return false;
-                }
                 switch(e.getAction()){
                     case MotionEvent.ACTION_DOWN:
                         dragging = false;
@@ -102,11 +97,19 @@ public class FloatingBuddy extends Service {
                     case MotionEvent.ACTION_MOVE:
                         float dx = e.getRawX() - downX;
                         float dy = e.getRawY() - downY;
+                        // Only start drag after a REAL drag, not a tap wiggle
                         if(!dragging && (Math.abs(dx) > 35 || Math.abs(dy) > 35)){
+                            // If menu/chat is open, only allow whole-window drag from the TOP of the window
+                            // (the Crystal head area). Taps lower down = buttons / AI box, let JS handle them.
+                            if (chatOpen) {
+                                float touchYInWindow = e.getY(); // 0 = top of window
+                                if (touchYInWindow > dp(110)) {
+                                    return false; // let JS drag the AI box / tap buttons
+                                }
+                            }
                             dragging = true;
                         }
                         if(dragging){
-                            // FIX: Ignore huge jumps (from window resize / tap jitter)
                             if (Math.abs(dx) > 300 || Math.abs(dy) > 300) return false;
                             params.x = startX + (int)dx;
                             params.y = startY + (int)dy;
@@ -166,6 +169,9 @@ public class FloatingBuddy extends Service {
             new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
                 try{
                     chatOpen = (w > 250);
+                    // FIX: Keep CENTER in place, not top-left, so no teleport left
+                    int oldCenterX = params.x + params.width / 2;
+                    int oldCenterY = params.y + params.height / 2;
                     int nw = w;
                     int nh = h;
                     if(!chatOpen){
@@ -173,9 +179,12 @@ public class FloatingBuddy extends Service {
                         if(nh < 260) nh = 260;
                     }
                     params.width = dp(nw); params.height = dp(nh);
+                    params.x = oldCenterX - params.width / 2;
+                    params.y = oldCenterY - params.height / 2;
                     if(params.y + params.height > screenH) params.y = screenH - params.height;
                     if(params.y < 0) params.y = 0;
                     if(params.x + params.width > screenW) params.x = screenW - params.width;
+                    if(params.x < 0) params.x = 0;
                     wm.updateViewLayout(web, params);
                     updateFocus();
                 }catch(Exception ignored){}
@@ -187,4 +196,4 @@ public class FloatingBuddy extends Service {
         try{ if(tts != null){ tts.stop(); tts.shutdown(); } }catch(Exception ignored){}
         try{ if(web != null) wm.removeView(web); }catch(Exception ignored){}
     }
-            }
+        }
