@@ -33,7 +33,6 @@ public class FloatingBuddy extends Service {
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(Color.TRANSPARENT);
         web = new WebView(this);
-        // FIX: no text selection, no long-press highlight, no haptic
         web.setLongClickable(false);
         web.setHapticFeedbackEnabled(false);
         web.setOnLongClickListener(new View.OnLongClickListener(){ @Override public boolean onLongClick(View v){ return true; } });
@@ -77,7 +76,7 @@ public class FloatingBuddy extends Service {
         DisplayMetrics dm = new DisplayMetrics(); try{ wm.getDefaultDisplay().getMetrics(dm); }catch(Exception ignored){}
         screenW = dm.widthPixels > 0 ? dm.widthPixels : 1080;
         screenH = dm.heightPixels > 0 ? dm.heightPixels : 1920;
-        int winW = 220; int winH = 260;
+        int winW = 320; int winH = 280;
         int centerX = (screenW - winW) / 2; if(centerX < 0) centerX = 0;
         params = new WindowManager.LayoutParams(winW, winH, type, WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL, PixelFormat.TRANSLUCENT);
         params.gravity = Gravity.TOP | Gravity.START;
