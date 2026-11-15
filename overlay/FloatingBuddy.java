@@ -59,6 +59,8 @@ public class FloatingBuddy extends Service {
         web.getSettings().setDomStorageEnabled(true);
         web.getSettings().setMediaPlaybackRequiresUserGesture(false);
         web.setBackgroundColor(android.graphics.Color.TRANSPARENT);
+        web.setBackgroundColor(0);
+web.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         web.addJavascriptInterface(new MiniBridge(), "AndroidMini");
         web.setWebViewClient(new WebViewClient(){
             @Override public void onPageFinished(WebView view, String url){
@@ -90,7 +92,7 @@ public class FloatingBuddy extends Service {
                     case MotionEvent.ACTION_MOVE:
                         float dx = e.getRawX() - downX;
                         float dy = e.getRawY() - downY;
-                        if(!dragging && (Math.abs(dx) > 12 || Math.abs(dy) > 12)){
+                        if(!dragging && (Math.abs(dx) > 22 || Math.abs(dy) > 22)){
                             dragging = true;
                         }
                         if(dragging){
