@@ -125,7 +125,9 @@ body.chatting #captionBubble{display:none!important}
 #minimizeBtn{display:block;position:absolute;top:10px;right:10px;z-index:99999;background:#FFD700;color:#000;border:none;padding:9px 13px;border-radius:999px;font-weight:900;font-size:11px;cursor:pointer}
 body.mini-mode #minimizeBtn{display:none!important}
 body.chatting #minimizeBtn{display:none!important}
-body.mini-mode #room{overflow:hidden!important;background:transparent!important;background-image:none!important}
+body.mini-mode{overflow:hidden !important;background:transparent !important;touch-action:none;}
+body.mini-mode #buddyWrap{left:50% !important;top:58% !important;transform:translate(-50%,-50%) !important;touch-action:manipulation;}
+body.mini-mode #buddy{pointer-events:auto;}
 body.mini-mode #buddyWrap{left:50%!important;top:105px!important;transform:translate(-50%,-50%)!important}
 body.mini-mode #miniChat{top:230px!important;left:50%!important;transform:translateX(-50%)!important}
 #miniOptions{display:none;position:absolute;bottom:-2px;left:50%;transform:translateX(-50%);gap:2px;z-index:99999;white-space:nowrap;flex-direction:row;align-items:center;background:rgba(0,0,0,.82);border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:4px;box-shadow:0 8px 20px rgba(0,0,0,.55)}
@@ -290,7 +292,10 @@ if('speechSynthesis' in window){speechSynthesis.getVoices();speechSynthesis.onvo
     if(e.target.closest&&e.target.closest('#miniOptions'))return;
     if(e.target.closest&&e.target.closest('#landing'))return;
     if(e.target.closest&&e.target.closest('#chatPanel'))return;
-    if(isMiniMode()){return;}
+   if(document.body.classList.contains('mini-mode')) return;
+if(window.location.href.indexOf('mini')!==-1) return;
+if(window.__forceMini) return;
+if(typeof isMiniMode==='function' && isMiniMode()){return;}
     var p=getP(e);startX=p.clientX;startY=p.clientY;lastMoveX=p.clientX;lastMoveY=p.clientY;downTime=Date.now();var r=wrap.getBoundingClientRect();startLeft=r.left;startTop=r.top;moved=false;isDragging=false;didLongPress=false;draggingBuddy=true;
     if(document.getElementById('spriteBox').className.indexOf('sleeping')!==-1){setSpriteState('popping',900,'surprised');showThought('😳 Awake!');}
     pressTimer=setTimeout(function(){didLongPress=true;swapNextAvatar();if(navigator.vibrate)navigator.vibrate(50);},800);
@@ -298,6 +303,8 @@ if('speechSynthesis' in window){speechSynthesis.getVoices();speechSynthesis.onvo
   function chatDown(e){var p=getP(e);startX=p.clientX;startY=p.clientY;var r=panel.getBoundingClientRect();startLeft=r.left;startTop=r.top;draggingChat=true;moved=false;e.preventDefault();e.stopPropagation();}
   function miniDown(e){var p=getP(e);startX=p.clientX;startY=p.clientY;var r=miniChatEl.getBoundingClientRect();startLeft=r.left;startTop=r.top;miniChatEl.style.left=r.left+'px';miniChatEl.style.top=r.top+'px';miniChatEl.style.transform='none';draggingMini=true;moved=false;e.preventDefault();e.stopPropagation();}
   function onMove(e){
+    if(document.body.classList.contains('mini-mode')) return;
+    if(window.__forceMini) return;
     var p=getP(e);var dx=p.clientX-startX,dy=p.clientY-startY;
     if(draggingMini){if(Math.abs(dx)>4||Math.abs(dy)>4)moved=true;miniChatEl.style.left=Math.max(4,Math.min(window.innerWidth-(miniChatEl.offsetWidth||284)-4,startLeft+dx))+'px';miniChatEl.style.top=Math.max(60,Math.min(window.innerHeight-80,startTop+dy))+'px';miniChatEl.style.transform='none';if(e.cancelable)e.preventDefault();return;}
     if(draggingChat){if(Math.abs(dx)>4||Math.abs(dy)>4)moved=true;panel.style.left=Math.max(4,Math.min(window.innerWidth-(panel.offsetWidth||300)-4,startLeft+dx))+'px';panel.style.top=Math.max(4,Math.min(window.innerHeight-120,startTop+dy))+'px';panel.style.transform='none';if(e.cancelable)e.preventDefault();return;}
@@ -338,4 +345,4 @@ document.addEventListener('keydown', function(e){
 scheduleIdle();
 </script>
 </body>
-</html>
+  </html>
