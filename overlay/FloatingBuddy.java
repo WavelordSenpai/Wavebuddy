@@ -81,7 +81,14 @@ public class FloatingBuddy extends Service {
                 hh.post(() -> {
                     try{
                         chatOpen = (w > 250);
+                        int oldW = params.width;
+                        int oldH = params.height;
+                        // KEEP CENTER: when width grows 200 -> 320, move x left by 60 so he stays in place, doesn't jump left
+                        int centerX = params.x + oldW / 2;
+                        int centerY = params.y + oldH / 2;
                         params.width = w; params.height = h;
+                        params.x = centerX - w / 2;
+                        params.y = centerY - h / 2;
                         if(params.x + w > screenW) params.x = screenW - w;
                         if(params.x < 0) params.x = 0;
                         if(params.y + h > screenH) params.y = screenH - h;
@@ -112,41 +119,39 @@ public class FloatingBuddy extends Service {
         params.x = centerX; params.y = 200;
         try { wm.addView(fv, params); } catch (Exception e) {}
 
-        // FIX: touch listener MUST be on the WebView, not the outer layout.
-        // WebView eats touches otherwise and tap/drag never fire.
         web.setOnTouchListener(new View.OnTouchListener(){
             @Override public boolean onTouch(View v, MotionEvent e){
                 if(e.getAction() == MotionEvent.ACTION_DOWN){
                     initX = params.x; initY = params.y; downX = e.getRawX(); downY = e.getRawY(); dragging = false; downTime = System.currentTimeMillis();
-                    // Let WebView see DOWN so buttons / inputs still get focus when chat is open
-                    // We return false here, we decide on UP / MOVE
-                    return false;
+                    // If chat is open, let WebView handle buttons/typing. If chat closed, WE own the touch so WebView can't slide him.
+                    if(chatOpen) return false;
+                    return true;
                 }
                 if(e.getAction() == MotionEvent.ACTION_MOVE){
+                    if(chatOpen) return false;
                     float dx = e.getRawX() - downX; float dy = e.getRawY() - downY;
-                    if(!dragging && (Math.abs(dx) > 12 || Math.abs(dy) > 12)) dragging = true;
+                    if(!dragging && (Math.abs(dx) > 20 || Math.abs(dy) > 20)) dragging = true;
                     if(dragging){
                         params.x = initX + (int)dx; params.y = initY + (int)dy;
                         if(params.x < -20) params.x = -20; if(params.x > screenW - 100) params.x = screenW - 100; if(params.y < 0) params.y = 0; if(params.y > screenH - 100) params.y = screenH - 100;
                         try{ wm.updateViewLayout(fv, params); }catch(Exception ignored){}
                         return true;
                     }
-                    return false;
+                    return true;
                 }
                 if(e.getAction() == MotionEvent.ACTION_UP || e.getAction() == MotionEvent.ACTION_CANCEL){
+                    if(chatOpen) return false;
                     boolean wasDragging = dragging;
                     long tapTime = System.currentTimeMillis() - downTime;
                     float totalDx = Math.abs(e.getRawX() - downX);
                     float totalDy = Math.abs(e.getRawY() - downY);
                     dragging = false;
                     if(wasDragging) return true;
-                    // If chat is open, let WebView handle taps on buttons / input (don't hijack)
-                    if(chatOpen) return false;
-                    if(tapTime < 600 && totalDx < 15 && totalDy < 15){
+                    if(tapTime < 600 && totalDx < 20 && totalDy < 20){
                         try{ web.post(() -> { try{ web.evaluateJavascript("if(typeof onBuddyTap==='function'){onBuddyTap({stopPropagation:function(){}})}", null); }catch(Exception ignored){} }); }catch(Exception ignored){}
                         return true;
                     }
-                    return false;
+                    return true;
                 }
                 return false;
             }
@@ -161,4 +166,4 @@ public class FloatingBuddy extends Service {
         try { if (fv != null && wm != null) wm.removeView(fv); } catch (Exception e) {}
         try { if(web != null) web.destroy(); } catch(Exception ignored){}
     }
-                    }
+                       }
