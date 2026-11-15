@@ -8,7 +8,7 @@ import android.widget.LinearLayout; import android.speech.tts.TextToSpeech; impo
 public class FloatingBuddy extends Service {
     private WindowManager wm; private View fv; private WindowManager.LayoutParams params; private WebView web; private TextToSpeech tts;
     private int screenW = 1080; private int screenH = 1920;
-    private int initX, initY; private float downX, downY; private boolean dragging = false;
+    private int initX, initY; private float downX, downY; private boolean dragging = false; private long downTime = 0;
     private void doSpeak(String t){
         if(t == null) return; String clean = t.replaceAll("<[^>]*>", "").replaceAll("\\s+", " ").trim(); if(clean.isEmpty()) return; if(clean.length()>250) clean = clean.substring(0,250); final String toSay = clean;
         try{
@@ -82,10 +82,11 @@ public class FloatingBuddy extends Service {
         params.gravity = Gravity.TOP | Gravity.START;
         params.x = centerX; params.y = 200;
         try { wm.addView(fv, params); } catch (Exception e) {}
+        // FINAL TAP FIX: Java detects tap vs drag, then tells JS directly
         web.setOnTouchListener(new View.OnTouchListener(){
             @Override public boolean onTouch(View v, MotionEvent e){
                 if(e.getAction() == MotionEvent.ACTION_DOWN){
-                    initX = params.x; initY = params.y; downX = e.getRawX(); downY = e.getRawY(); dragging = false;
+                    initX = params.x; initY = params.y; downX = e.getRawX(); downY = e.getRawY(); dragging = false; downTime = System.currentTimeMillis();
                     return false;
                 }
                 if(e.getAction() == MotionEvent.ACTION_MOVE){
@@ -100,8 +101,21 @@ public class FloatingBuddy extends Service {
                     return false;
                 }
                 if(e.getAction() == MotionEvent.ACTION_UP || e.getAction() == MotionEvent.ACTION_CANCEL){
-                    boolean wasDragging = dragging; dragging = false;
+                    boolean wasDragging = dragging;
+                    long tapTime = System.currentTimeMillis() - downTime;
+                    float totalDx = Math.abs(e.getRawX() - downX);
+                    float totalDy = Math.abs(e.getRawY() - downY);
+                    dragging = false;
                     if(wasDragging) return true;
+                    // TAP: quick + didn't move = tap him
+                    if(tapTime < 500 && totalDx < 15 && totalDy < 15){
+                        try{
+                            web.post(() -> {
+                                try{ web.evaluateJavascript("if(typeof onBuddyTap==='function'){onBuddyTap({stopPropagation:function(){}})}", null); }catch(Exception ignored){}
+                            });
+                        }catch(Exception ignored){}
+                        return true;
+                    }
                     return false;
                 }
                 return false;
@@ -116,4 +130,4 @@ public class FloatingBuddy extends Service {
         try { if (fv != null && wm != null) wm.removeView(fv); } catch (Exception e) {}
         try { if(web != null) web.destroy(); } catch(Exception ignored){}
     }
-    }
+}
