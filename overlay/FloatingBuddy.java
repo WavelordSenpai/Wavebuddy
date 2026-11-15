@@ -2,12 +2,13 @@ package com.wavelord.wavebuddy;
 import android.app.Notification; import android.app.NotificationChannel; import android.app.NotificationManager; import android.app.Service;
 import android.content.Intent; import android.graphics.Color; import android.graphics.PixelFormat; import android.os.Build; import android.os.IBinder;
 import android.util.DisplayMetrics;
-import android.view.Gravity; import android.view.View; import android.view.WindowManager;
+import android.view.Gravity; import android.view.MotionEvent; import android.view.View; import android.view.WindowManager;
 import android.webkit.JavascriptInterface; import android.webkit.WebResourceRequest; import android.webkit.WebSettings; import android.webkit.WebView; import android.webkit.WebViewClient;
 import android.widget.LinearLayout; import android.speech.tts.TextToSpeech; import android.widget.Toast; import java.util.Locale;
 public class FloatingBuddy extends Service {
     private WindowManager wm; private View fv; private WindowManager.LayoutParams params; private WebView web; private TextToSpeech tts;
-    private int screenW = 1080;
+    private int screenW = 1080; private int screenH = 1920;
+    private int initX, initY; private float downX, downY; private boolean dragging = false;
     private void doSpeak(String t){
         if(t == null) return; String clean = t.replaceAll("<[^>]*>", "").replaceAll("\\s+", " ").trim(); if(clean.isEmpty()) return; if(clean.length()>250) clean = clean.substring(0,250); final String toSay = clean;
         try{
@@ -45,15 +46,29 @@ public class FloatingBuddy extends Service {
                 android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
                 h.postDelayed(() -> { try{ stopSelf(); }catch(Exception ignored){} }, 800);
             }
+            @JavascriptInterface public void setWindowSize(final int w, final int h){
+                android.os.Handler hh = new android.os.Handler(android.os.Looper.getMainLooper());
+                hh.post(() -> {
+                    try{
+                        params.width = w; params.height = h;
+                        if(params.x + w > screenW) params.x = screenW - w;
+                        if(params.x < 0) params.x = 0;
+                        if(params.y + h > screenH) params.y = screenH - h;
+                        if(params.y < 0) params.y = 0;
+                        wm.updateViewLayout(fv, params);
+                    }catch(Exception ignored){}
+                });
+            }
             @JavascriptInterface public void moveWindow(int dx, int dy){
                 try{
                     android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
                     h.post(() -> {
                         try{
                             params.x += dx; params.y += dy;
-                            if(params.x < -220) params.x = -220;
+                            if(params.x < -20) params.x = -20;
                             if(params.x > screenW - 100) params.x = screenW - 100;
                             if(params.y < 0) params.y = 0;
+                            if(params.y > screenH - 100) params.y = screenH - 100;
                             wm.updateViewLayout(fv, params);
                         }catch(Exception ignored){}
                     });
@@ -71,12 +86,31 @@ public class FloatingBuddy extends Service {
         int type = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_PHONE;
         DisplayMetrics dm = new DisplayMetrics(); try{ wm.getDefaultDisplay().getMetrics(dm); }catch(Exception ignored){}
         screenW = dm.widthPixels > 0 ? dm.widthPixels : 1080;
-        int winW = 320; int winH = 620;
+        screenH = dm.heightPixels > 0 ? dm.heightPixels : 1920;
+        int winW = 220; int winH = 260;
         int centerX = (screenW - winW) / 2; if(centerX < 0) centerX = 0;
         params = new WindowManager.LayoutParams(winW, winH, type, WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL, PixelFormat.TRANSLUCENT);
         params.gravity = Gravity.TOP | Gravity.START;
-        params.x = centerX; params.y = 80;
+        params.x = centerX; params.y = 200;
         try { wm.addView(fv, params); } catch (Exception e) {}
+        root.setOnTouchListener(new View.OnTouchListener(){
+            @Override public boolean onTouch(View v, MotionEvent e){
+                if(e.getAction() == MotionEvent.ACTION_DOWN){ initX = params.x; initY = params.y; downX = e.getRawX(); downY = e.getRawY(); dragging = false; return false; }
+                if(e.getAction() == MotionEvent.ACTION_MOVE){
+                    float dx = e.getRawX() - downX; float dy = e.getRawY() - downY;
+                    if(Math.abs(dx) > 5 || Math.abs(dy) > 5) dragging = true;
+                    if(dragging){
+                        params.x = initX + (int)dx; params.y = initY + (int)dy;
+                        if(params.x < -20) params.x = -20; if(params.x > screenW - 100) params.x = screenW - 100; if(params.y < 0) params.y = 0; if(params.y > screenH - 100) params.y = screenH - 100;
+                        try{ wm.updateViewLayout(fv, params); }catch(Exception ignored){}
+                        return true;
+                    }
+                    return false;
+                }
+                if(e.getAction() == MotionEvent.ACTION_UP || e.getAction() == MotionEvent.ACTION_CANCEL){ dragging = false; return false; }
+                return false;
+            }
+        });
     }
     private void openApp(){ Intent i = new Intent(FloatingBuddy.this, MainActivity.class); i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT); startActivity(i); stopSelf(); }
     @Override public int onStartCommand(Intent intent, int flags, int startId) { return START_STICKY; }
