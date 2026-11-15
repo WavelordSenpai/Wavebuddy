@@ -125,6 +125,8 @@ body.chatting #captionBubble{display:none!important}
 body.mini-mode #minimizeBtn{display:none!important}
 body.chatting #minimizeBtn{display:none!important}
 body.mini-mode{overflow:hidden !important;background:transparent !important;touch-action:manipulation;}
+body.mini-mode #room{pointer-events:none !important;}
+body.mini-mode #buddyWrap, body.mini-mode #miniChat, body.mini-mode #miniOptions{pointer-events:auto !important;}
 body.mini-mode #buddyWrap{left:50% !important;top:58% !important;transform:translate(-50%,-50%) !important;touch-action:manipulation;}
 body.mini-mode #buddy{pointer-events:auto;}
 body.mini-mode #buddyWrap{left:50%!important;top:105px!important;transform:translate(-50%,-50%)!important}
@@ -214,7 +216,7 @@ var AVATAR_ORDER=['tetra','cube','crystal','dodeca','icosa','robot'];
 var currentAvatarKey='crystal'; var lastBuddyText='Hey! What do you need?'; var lastUserText=''; var isChatting=false; var chatLockUntil=0; var isDragging=false; var didLongPress=false; var idleTimer=null; var zzzInterval=null; var eyeMoveInterval=null; var lastMoveIndex=-1;
 var IS_MINI=window.location.search.indexOf('mode=mini')!==-1;
 if(window.location.search.indexOf('overlay=1')!==-1){document.body.classList.add('overlay');document.documentElement.classList.add('overlay');}
-if(IS_MINI){document.body.classList.add('overlay');document.documentElement.classList.add('overlay');document.body.classList.add('mini-mode');document.documentElement.classList.add('mini-mode');setTimeout(function(){if(window.AndroidMini && window.AndroidMini.setWindowSize){try{window.AndroidMini.setWindowSize(320,280);}catch(err){}}},500);}
+if(IS_MINI){document.body.classList.add('overlay');document.documentElement.classList.add('overlay');document.body.classList.add('mini-mode');document.documentElement.classList.add('mini-mode');setTimeout(function(){if(window.AndroidMini && window.AndroidMini.setWindowSize){try{window.AndroidMini.setWindowSize(180,220);}catch(err){}}}
 function isMiniMode(){return document.body.classList.contains('mini-mode')||IS_MINI;}
 function tryMinimize(e){
   if(e) e.stopPropagation();
