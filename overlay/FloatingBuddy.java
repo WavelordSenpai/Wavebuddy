@@ -81,13 +81,8 @@ public class FloatingBuddy extends Service {
                 hh.post(() -> {
                     try{
                         chatOpen = (w > 250);
-                        int oldW = params.width;
-                        int oldH = params.height;
-                        int centerX = params.x + oldW / 2;
-                        int centerY = params.y + oldH / 2;
-                        params.width = w; params.height = h;
-                        params.x = centerX - w / 2;
-                        params.y = centerY - h / 2;
+                                     params.width = w; params.height = h;
+            // DO NOT recenter - keep same top-left, or every tap jumps sideways
                         if(params.x + w > screenW) params.x = screenW - w;
                         if(params.x < 0) params.x = 0;
                         if(params.y + h > screenH) params.y = screenH - h;
@@ -158,4 +153,4 @@ public class FloatingBuddy extends Service {
         try { if (fv != null && wm != null) wm.removeView(fv); } catch (Exception e) {}
         try { if(web != null) web.destroy(); } catch(Exception ignored){}
     }
-        }
+                    }
