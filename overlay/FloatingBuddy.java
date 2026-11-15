@@ -75,14 +75,12 @@ public class FloatingBuddy extends Service {
         DisplayMetrics dm = new DisplayMetrics(); try{ wm.getDefaultDisplay().getMetrics(dm); }catch(Exception ignored){}
         screenW = dm.widthPixels > 0 ? dm.widthPixels : 1080;
         screenH = dm.heightPixels > 0 ? dm.heightPixels : 1920;
-        // FIX 1: START SMALL - only buddy body, not a big invisible box
         int winW = 180; int winH = 210;
         int centerX = (screenW - winW) / 2; if(centerX < 0) centerX = 0;
         params = new WindowManager.LayoutParams(winW, winH, type, WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL, PixelFormat.TRANSLUCENT);
         params.gravity = Gravity.TOP | Gravity.START;
         params.x = centerX; params.y = 200;
         try { wm.addView(fv, params); } catch (Exception e) {}
-        // FIX 2: Touch listener on the ROOT view, not on WebView - WebView was eating taps
         fv.setOnTouchListener(new View.OnTouchListener(){
             @Override public boolean onTouch(View v, MotionEvent e){
                 if(e.getAction() == MotionEvent.ACTION_DOWN){
@@ -118,7 +116,6 @@ public class FloatingBuddy extends Service {
         });
     }
     private void openApp(){ Intent i = new Intent(FloatingBuddy.this, MainActivity.class); i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT); startActivity(i); stopSelf(); }
-    // FIX 3: Do NOT restart when swiped away - he must die with the app
     @Override public int onStartCommand(Intent intent, int flags, int startId) { return START_NOT_STICKY; }
     @Override public void onTaskRemoved(Intent rootIntent) { super.onTaskRemoved(rootIntent); try{ stopSelf(); }catch(Exception ignored){} }
     @Override public void onDestroy() {
