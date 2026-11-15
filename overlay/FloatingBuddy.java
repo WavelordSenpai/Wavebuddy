@@ -8,7 +8,7 @@ import android.widget.LinearLayout; import android.speech.tts.TextToSpeech; impo
 public class FloatingBuddy extends Service {
     private WindowManager wm; private View fv; private WindowManager.LayoutParams params; private WebView web; private TextToSpeech tts;
     private int screenW = 1080; private int screenH = 1920;
-    private int initX, initY; private float downX, downY; private boolean dragging = false; private boolean isMiniChatOpen = false;
+    private int initX, initY; private float downX, downY; private boolean dragging = false;
     private void doSpeak(String t){
         if(t == null) return; String clean = t.replaceAll("<[^>]*>", "").replaceAll("\\s+", " ").trim(); if(clean.isEmpty()) return; if(clean.length()>250) clean = clean.substring(0,250); final String toSay = clean;
         try{
@@ -33,6 +33,10 @@ public class FloatingBuddy extends Service {
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(Color.TRANSPARENT);
         web = new WebView(this);
+        // FIX: no text selection, no long-press highlight, no haptic
+        web.setLongClickable(false);
+        web.setHapticFeedbackEnabled(false);
+        web.setOnLongClickListener(new View.OnLongClickListener(){ @Override public boolean onLongClick(View v){ return true; } });
         WebSettings ws = web.getSettings(); ws.setJavaScriptEnabled(true); ws.setDomStorageEnabled(true); ws.setAllowFileAccess(true); ws.setAllowContentAccess(true); ws.setMediaPlaybackRequiresUserGesture(false);
         web.setBackgroundColor(Color.TRANSPARENT);
         web.setBackgroundColor(0x00000000);
@@ -79,7 +83,6 @@ public class FloatingBuddy extends Service {
         params.gravity = Gravity.TOP | Gravity.START;
         params.x = centerX; params.y = 200;
         try { wm.addView(fv, params); } catch (Exception e) {}
-        // FIX: drag is on WebView itself, tap passes through, drag moves window
         web.setOnTouchListener(new View.OnTouchListener(){
             @Override public boolean onTouch(View v, MotionEvent e){
                 if(e.getAction() == MotionEvent.ACTION_DOWN){
@@ -114,4 +117,4 @@ public class FloatingBuddy extends Service {
         try { if (fv != null && wm != null) wm.removeView(fv); } catch (Exception e) {}
         try { if(web != null) web.destroy(); } catch(Exception ignored){}
     }
-        }
+    }
