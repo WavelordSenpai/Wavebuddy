@@ -25,11 +25,11 @@ public class FloatingBuddy extends Service {
     private WebView web;
     private TextToSpeech tts;
     private boolean dragging = false;
-    private long downTime = 0;
     private float downX = 0, downY = 0;
     private int startX = 0, startY = 0;
     private int screenW = 1080, screenH = 1920;
     private boolean chatOpen = false;
+    private boolean miniChatOpen = false;
     private float density = 2.6f;
     private int dp(int v){ return (int)(v * density + 0.5f); }
     @Override public IBinder onBind(Intent intent) { return null; }
@@ -85,10 +85,14 @@ public class FloatingBuddy extends Service {
         params.y = dp(400);
         web.setOnTouchListener(new View.OnTouchListener(){
             @Override public boolean onTouch(View v, MotionEvent e){
+                // FIX: If AI box is open, Java NEVER drags. JS drags the AI box inside.
+                if (miniChatOpen) {
+                    dragging = false;
+                    return false;
+                }
                 switch(e.getAction()){
                     case MotionEvent.ACTION_DOWN:
                         dragging = false;
-                        downTime = System.currentTimeMillis();
                         downX = e.getRawX();
                         downY = e.getRawY();
                         startX = params.x;
@@ -97,15 +101,10 @@ public class FloatingBuddy extends Service {
                     case MotionEvent.ACTION_MOVE:
                         float dx = e.getRawX() - downX;
                         float dy = e.getRawY() - downY;
-                        // Only start drag after a REAL drag, not a tap wiggle
                         if(!dragging && (Math.abs(dx) > 35 || Math.abs(dy) > 35)){
-                            // If menu/chat is open, only allow whole-window drag from the TOP of the window
-                            // (the Crystal head area). Taps lower down = buttons / AI box, let JS handle them.
                             if (chatOpen) {
-                                float touchYInWindow = e.getY(); // 0 = top of window
-                                if (touchYInWindow > dp(110)) {
-                                    return false; // let JS drag the AI box / tap buttons
-                                }
+                                float touchYInWindow = e.getY();
+                                if (touchYInWindow > dp(110)) return false;
                             }
                             dragging = true;
                         }
@@ -165,13 +164,19 @@ public class FloatingBuddy extends Service {
                 try{ chatOpen = open; updateFocus(); }catch(Exception ignored){}
             });
         }
+        @JavascriptInterface public void setMiniChatOpen(final boolean open){
+            new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
+                try{ miniChatOpen = open; }catch(Exception ignored){}
+            });
+        }
         @JavascriptInterface public void setWindowSize(final int w, final int h){
             new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
                 try{
                     chatOpen = (w > 250);
-                    // FIX: Keep CENTER in place, not top-left, so no teleport left
+                    // FIX: X = keep CENTER (Crystal is centered left-right)
+                    // FIX: Y = keep TOP (Crystal is at top, do NOT move Y up)
                     int oldCenterX = params.x + params.width / 2;
-                    int oldCenterY = params.y + params.height / 2;
+                    int oldTopY = params.y;
                     int nw = w;
                     int nh = h;
                     if(!chatOpen){
@@ -180,7 +185,7 @@ public class FloatingBuddy extends Service {
                     }
                     params.width = dp(nw); params.height = dp(nh);
                     params.x = oldCenterX - params.width / 2;
-                    params.y = oldCenterY - params.height / 2;
+                    params.y = oldTopY;
                     if(params.y + params.height > screenH) params.y = screenH - params.height;
                     if(params.y < 0) params.y = 0;
                     if(params.x + params.width > screenW) params.x = screenW - params.width;
@@ -196,4 +201,4 @@ public class FloatingBuddy extends Service {
         try{ if(tts != null){ tts.stop(); tts.shutdown(); } }catch(Exception ignored){}
         try{ if(web != null) wm.removeView(web); }catch(Exception ignored){}
     }
-        }
+                           }
