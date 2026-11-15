@@ -125,16 +125,20 @@ body.chatting #captionBubble{display:none!important}
 body.mini-mode #minimizeBtn{display:none!important}
 body.chatting #minimizeBtn{display:none!important}
 body.mini-mode{overflow:hidden !important;background:transparent !important;touch-action:manipulation;}
-body.mini-mode #buddyWrap{left:50% !important;top:58% !important;transform:translate(-50%,-50%) !important;touch-action:manipulation;}
-body.mini-mode #room{pointer-events:none !important;}
+body.mini-mode #room{pointer-events:none !important;overflow:hidden !important;}
 body.mini-mode #buddyWrap, body.mini-mode #miniChat, body.mini-mode #miniOptions{pointer-events:auto !important;}
-body.mini-mode #buddy{pointer-events:auto;}
-body.mini-mode #buddyWrap{left:50%!important;top:50%!important;transform:translate(-50%,-50%)!important}
+body.mini-mode #buddyWrap{left:50% !important;top:50% !important;transform:translate(-50%,-50%) !important;width:180px !important;height:240px !important;overflow:visible !important;}
+body.mini-mode #miniLabel{top:0 !important;left:50% !important;transform:translateX(-50%) !important;}
+body.mini-mode #spriteBox{position:absolute !important;top:26px !important;left:50% !important;transform:translateX(-50%) !important;width:130px !important;height:150px !important;margin:0 !important;}
+body.mini-mode #spriteBox svg{width:130px !important;height:150px !important;}
+body.mini-mode #thought, body.mini-mode #captionBubble{display:none !important;}
+body.mini-mode #moodDot{bottom:36px !important;top:auto !important;}
 body.mini-mode #miniChat{top:230px!important;left:50%!important;transform:translateX(-50%)!important}
 #miniOptions{display:none;position:absolute;bottom:-2px;left:50%;transform:translateX(-50%);gap:2px;z-index:99999;white-space:nowrap;flex-direction:row;align-items:center;background:rgba(0,0,0,.82);border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:4px;box-shadow:0 8px 20px rgba(0,0,0,.55)}
 #miniOptions.show{display:flex}
-body.mini-mode #miniOptions{display:none}
-body.mini-mode #miniOptions.show{display:flex}
+body.mini-mode #miniOptions{display:none;bottom:0 !important;left:50% !important;transform:translateX(-50%) !important;width:180px !important;gap:4px !important;justify-content:center !important;}
+body.mini-mode #miniOptions.show{display:flex !important}
+body.mini-mode #miniOptions button{padding:7px 6px !important;font-size:11px !important;}
 body:not(.mini-mode) #miniOptions{display:none!important}
 #miniTalkBtn{background:#FFD700;color:#000;font-weight:900;font-size:11px;padding:9px 10px;border-radius:999px;border:none;cursor:pointer;white-space:nowrap}
 #miniHomeBtn{background:transparent;color:#fff;font-weight:900;font-size:11px;padding:9px 10px;border-radius:999px;border:none;cursor:pointer;white-space:nowrap}
@@ -228,14 +232,15 @@ function tryMinimize(e){
   document.documentElement.classList.add('mini-mode');
   document.body.classList.add('overlay');
   var wrap = document.getElementById('buddyWrap');
-  if(wrap){ wrap.style.left='50%'; wrap.style.top='105px'; wrap.style.transform='translate(-50%,-50%)'; }
+  if(wrap){ wrap.style.left='50%'; wrap.style.top='50%'; wrap.style.transform='translate(-50%,-50%)'; }
   var mc = document.getElementById('miniChat');
   if(mc) mc.classList.remove('open');
   showThought('✨ Mini mode! Tap me, then Home to go back');
 }
 function tryExpandFromDemo(e){if(e)e.stopPropagation();if(window.AndroidMini&&window.AndroidMini.expand){try{window.AndroidMini.expand();}catch(err){}}document.body.classList.remove('mini-mode');document.documentElement.classList.remove('mini-mode');var wrap=document.getElementById('buddyWrap');wrap.style.left='50%';wrap.style.top='58%';wrap.style.transform='translate(-50%,-50%)';var mc=document.getElementById('miniChat');if(mc)mc.classList.remove('open');}
 function sayGoodbye(e){if(e)e.stopPropagation();showThought('👋 Bye! See you soon!');setSpriteState('wavingSlow',1500,'happy');setTimeout(function(){if(window.AndroidMini&&window.AndroidMini.exit){try{window.AndroidMini.exit();return;}catch(err){}}try{window.close();}catch(err){}document.body.innerHTML='<div style="background:#0A0A0A;color:#fff;height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;font-family:Arial;padding:20px"><div><div style="font-size:48px">👋</div><h2>Bye! See you soon!</h2><p>Wave Buddy has gone to sleep.</p></div></div>';},900);}
-function onBuddyTap(e){if(e)e.stopPropagation();if(e.target&&e.target.closest&&e.target.closest('#miniChat'))return;if(isMiniMode()){var mo=document.getElementById('miniOptions');if(mo){mo.classList.toggle('show');}return;}openChat();}
+var __lastMiniTap=0;
+function onBuddyTap(e){if(e)e.stopPropagation();if(e.target&&e.target.closest&&e.target.closest('#miniChat'))return;if(isMiniMode()){var now=Date.now();if(now-__lastMiniTap<350)return;__lastMiniTap=now;var mo=document.getElementById('miniOptions');if(mo){mo.classList.toggle('show');}return;}openChat();}
 function onMiniTalk(e){if(e)e.stopPropagation();toggleMiniChat(e);}
 function loadMemory(){var m=null;try{m=JSON.parse(localStorage.getItem('waveBuddyMemory')||'null');}catch(e){}if(!m){try{m=JSON.parse(sessionStorage.getItem('waveBuddyMemory')||'null');}catch(e){}}if(!m&&window.__WB_MEMORY)m=window.__WB_MEMORY;if(!m)m={};return m;}
 function saveMemory(m){window.__WB_MEMORY=m;try{localStorage.setItem('waveBuddyMemory',JSON.stringify(m));}catch(e){}try{sessionStorage.setItem('waveBuddyMemory',JSON.stringify(m));}catch(e){}}
@@ -352,64 +357,5 @@ document.addEventListener('keydown', function(e){
 });
 scheduleIdle();
 </script>
-<style>
-/* FIX IN-APP - Android WebView cuts buddy off at bottom, browser does not */
-body:not(.mini-mode) #room{ overflow:hidden !important; }
-body:not(.mini-mode) #buddyWrap{
-  position:fixed !important;
-  left:50% !important;
-  bottom:12px !important;
-  top:auto !important;
-  transform:translateX(-50%) !important;
-  width:180px !important;
-  height:auto !important;
-  min-height:230px !important;
-  overflow:visible !important;
-  z-index:9999 !important;
-  pointer-events:auto !important;
-}
-body:not(.mini-mode) #miniLabel{
-  position:relative !important;
-  top:0 !important;
-  left:50% !important;
-  transform:translateX(-50%) !important;
-}
-body:not(.mini-mode) #spriteBox{
-  position:relative !important;
-  top:0 !important;
-  left:50% !important;
-  transform:translateX(-50%) !important;
-  margin:6px auto 0 auto !important;
-  width:130px !important;
-  height:150px !important;
-}
-body:not(.mini-mode) #miniOptions{
-  position:relative !important;
-  bottom:auto !important;
-  left:50% !important;
-  transform:translateX(-50%) !important;
-  margin-top:6px !important;
-  width:180px !important;
-  display:flex !important;
-  gap:4px !important;
-  justify-content:center !important;
-  pointer-events:auto !important;
-}
-body:not(.mini-mode) #miniOptions button{
-  padding:7px 6px !important;
-  font-size:11px !important;
-  pointer-events:auto !important;
-}
-/* KEEP FLOATING FIX TOO */
-body.mini-mode #buddyWrap{
-  left:50% !important; top:50% !important;
-  transform:translate(-50%,-50%) !important;
-  width:180px !important; height:240px !important;
-}
-body.mini-mode #miniLabel{ top:0 !important; left:50% !important; transform:translateX(-50%) !important; }
-body.mini-mode #spriteBox{ top:28px !important; left:50% !important; transform:translateX(-50%) !important; width:130px !important; height:150px !important; margin:0 !important; }
-body.mini-mode #miniOptions{ bottom:0 !important; left:50% !important; transform:translateX(-50%) !important; width:180px !important; display:flex !important; gap:4px !important; justify-content:center !important; }
-body.mini-mode #miniOptions button{ padding:7px 6px !important; font-size:11px !important; }
-</style>
 </body>
 </html>
