@@ -1,4 +1,4 @@
-package com.wavebuddy.overlay;
+package com.wavelord.wavebuddy;
 
 import android.app.Service;
 import android.content.Intent;
@@ -66,7 +66,6 @@ public class FloatingBuddy extends Service {
         params.x = screenW - 340;
         params.y = 400;
 
-        // TAP vs DRAG - tap = open pill, drag = move window
         web.setOnTouchListener(new View.OnTouchListener(){
             @Override public boolean onTouch(View v, MotionEvent e){
                 switch(e.getAction()){
@@ -76,11 +75,10 @@ public class FloatingBuddy extends Service {
                         downY = e.getRawY();
                         startX = params.x;
                         startY = params.y;
-                        return false; // let WebView get the tap
+                        return false;
                     case MotionEvent.ACTION_MOVE:
                         float dx = e.getRawX() - downX;
                         float dy = e.getRawY() - downY;
-                        // Tap jitter is <12px. Only a real drag goes over 12px.
                         if(!dragging && (Math.abs(dx) > 12 || Math.abs(dy) > 12)){
                             dragging = true;
                         }
@@ -92,15 +90,13 @@ public class FloatingBuddy extends Service {
                             if(params.x + params.width > screenW) params.x = screenW - params.width;
                             if(params.y + params.height > screenH) params.y = screenH - params.height;
                             try{ wm.updateViewLayout(web, params); }catch(Exception ignored){}
-                            return true; // we moved window, WebView should NOT get this move
+                            return true;
                         }
                         return false;
                     case MotionEvent.ACTION_UP:
                     case MotionEvent.ACTION_CANCEL:
                         boolean wasDragging = dragging;
                         dragging = false;
-                        // If dragging, eat UP so it doesn't become a tap
-                        // If NOT dragging, return false so WebView fires the tap -> opens pill
                         return wasDragging;
                 }
                 return false;
@@ -118,7 +114,7 @@ public class FloatingBuddy extends Service {
 
     private void openApp(){
         try{
-            Intent i = new Intent(this, com.wavebuddy.MainActivity.class);
+            Intent i = new Intent(this, MainActivity.class);
             i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
             startActivity(i);
         }catch(Exception ignored){}
@@ -142,12 +138,10 @@ public class FloatingBuddy extends Service {
         }
         @JavascriptInterface public void testVoice(){ speak("Hello! This is Wave Buddy. Can you hear me now?"); }
         @JavascriptInterface public void setWindowSize(final int w, final int h){
-            // FIXED: grow taller for chat in place - NEVER move X/Y, NEVER recenter
             new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
                 try{
                     chatOpen = (w > 250);
                     params.width = w; params.height = h;
-                    // Only keep it on screen vertically, don't touch params.x
                     if(params.y + h > screenH) params.y = screenH - h;
                     if(params.y < 0) params.y = 0;
                     wm.updateViewLayout(web, params);
