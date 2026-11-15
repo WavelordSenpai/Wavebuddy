@@ -4,12 +4,12 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
-import android.view.View;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.speech.tts.TextToSpeech;
+import android.widget.Toast;
 import java.util.Locale;
 public class MainActivity extends Activity {
     private WebView web; private TextToSpeech tts;
@@ -30,10 +30,20 @@ public class MainActivity extends Activity {
         web.addJavascriptInterface(new Object(){
             @JavascriptInterface public void minimize(){
                 try{
+                    if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.M && !android.provider.Settings.canDrawOverlays(MainActivity.this)){
+                        runOnUiThread(() -> {
+                            Toast.makeText(MainActivity.this, "Allow 'Draw over other apps' for WaveBuddy, then tap MINIMIZE again", Toast.LENGTH_LONG).show();
+                            try{ Intent p=new Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION, android.net.Uri.parse("package:"+getPackageName())); startActivity(p); }catch(Exception ignored){}
+                        });
+                        return;
+                    }
                     Intent i=new Intent(MainActivity.this, FloatingBuddy.class);
                     if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.O) startForegroundService(i); else startService(i);
-                }catch(Exception ignored){}
-                runOnUiThread(() -> { try{ moveTaskToBack(true); }catch(Exception ignored){} });
+                }catch(Exception e){
+                    runOnUiThread(() -> Toast.makeText(MainActivity.this, "Could not start floating buddy: "+e.getMessage(), Toast.LENGTH_LONG).show());
+                    return;
+                }
+                runOnUiThread(() -> { try{ finish(); }catch(Exception ignored){} });
             }
             @JavascriptInterface public void expand(){}
             @JavascriptInterface public void speak(String t){ doSpeak(t); }
@@ -52,11 +62,11 @@ public class MainActivity extends Activity {
     @Override protected void onNewIntent(Intent intent){ super.onNewIntent(intent); setIntent(intent); }
     @Override protected void onDestroy(){
         super.onDestroy();
-        try{ stopService(new Intent(this, FloatingBuddy.class)); }catch(Exception ignored){}
         try{ if(tts!=null){ tts.stop(); tts.shutdown(); } }catch(Exception ignored){}
         try{ if(web!=null) web.destroy(); }catch(Exception ignored){}
     }
     @Override public void onBackPressed(){
+        try{ web.evaluateJavascript("if(document.body.classList.contains('mini-mode')){document.body.classList.remove('mini-mode');var w=document.getElementById('buddyWrap');w.style.left='50%';w.style.top='58%';w.style.transform='translate(-50%,-50%)';}", null); }catch(Exception ignored){}
         if(web!=null && web.canGoBack()){ web.goBack(); return; }
         super.onBackPressed();
     }
