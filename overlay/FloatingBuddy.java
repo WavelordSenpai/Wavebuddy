@@ -35,9 +35,8 @@ public class FloatingBuddy extends Service {
         web = new WebView(this);
         web.setLongClickable(false);
         web.setHapticFeedbackEnabled(false);
-        web.setOnLongClickListener(new View.OnLongClickListener(){ @Override public boolean onLongClick(View v){ return true; } });
+        web.setOnLongClickListener(v -> true);
         WebSettings ws = web.getSettings(); ws.setJavaScriptEnabled(true); ws.setDomStorageEnabled(true); ws.setAllowFileAccess(true); ws.setAllowContentAccess(true); ws.setMediaPlaybackRequiresUserGesture(false);
-        web.setBackgroundColor(Color.TRANSPARENT);
         web.setBackgroundColor(0x00000000);
         web.addJavascriptInterface(new Object(){
             @JavascriptInterface public void minimize(){}
@@ -76,14 +75,15 @@ public class FloatingBuddy extends Service {
         DisplayMetrics dm = new DisplayMetrics(); try{ wm.getDefaultDisplay().getMetrics(dm); }catch(Exception ignored){}
         screenW = dm.widthPixels > 0 ? dm.widthPixels : 1080;
         screenH = dm.heightPixels > 0 ? dm.heightPixels : 1920;
-        int winW = 320; int winH = 280;
+        // FIX 1: START SMALL - only buddy body, not a big invisible box
+        int winW = 180; int winH = 210;
         int centerX = (screenW - winW) / 2; if(centerX < 0) centerX = 0;
         params = new WindowManager.LayoutParams(winW, winH, type, WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL, PixelFormat.TRANSLUCENT);
         params.gravity = Gravity.TOP | Gravity.START;
         params.x = centerX; params.y = 200;
         try { wm.addView(fv, params); } catch (Exception e) {}
-        // FINAL TAP FIX: Java detects tap vs drag, then tells JS directly
-        web.setOnTouchListener(new View.OnTouchListener(){
+        // FIX 2: Touch listener on the ROOT view, not on WebView - WebView was eating taps
+        fv.setOnTouchListener(new View.OnTouchListener(){
             @Override public boolean onTouch(View v, MotionEvent e){
                 if(e.getAction() == MotionEvent.ACTION_DOWN){
                     initX = params.x; initY = params.y; downX = e.getRawX(); downY = e.getRawY(); dragging = false; downTime = System.currentTimeMillis();
@@ -107,13 +107,8 @@ public class FloatingBuddy extends Service {
                     float totalDy = Math.abs(e.getRawY() - downY);
                     dragging = false;
                     if(wasDragging) return true;
-                    // TAP: quick + didn't move = tap him
-                    if(tapTime < 500 && totalDx < 15 && totalDy < 15){
-                        try{
-                            web.post(() -> {
-                                try{ web.evaluateJavascript("if(typeof onBuddyTap==='function'){onBuddyTap({stopPropagation:function(){}})}", null); }catch(Exception ignored){}
-                            });
-                        }catch(Exception ignored){}
+                    if(tapTime < 600 && totalDx < 15 && totalDy < 15){
+                        try{ web.post(() -> { try{ web.evaluateJavascript("if(typeof onBuddyTap==='function'){onBuddyTap({stopPropagation:function(){}})}", null); }catch(Exception ignored){} }); }catch(Exception ignored){}
                         return true;
                     }
                     return false;
@@ -123,11 +118,13 @@ public class FloatingBuddy extends Service {
         });
     }
     private void openApp(){ Intent i = new Intent(FloatingBuddy.this, MainActivity.class); i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT); startActivity(i); stopSelf(); }
-    @Override public int onStartCommand(Intent intent, int flags, int startId) { return START_STICKY; }
+    // FIX 3: Do NOT restart when swiped away - he must die with the app
+    @Override public int onStartCommand(Intent intent, int flags, int startId) { return START_NOT_STICKY; }
+    @Override public void onTaskRemoved(Intent rootIntent) { super.onTaskRemoved(rootIntent); try{ stopSelf(); }catch(Exception ignored){} }
     @Override public void onDestroy() {
         super.onDestroy();
         try { if(tts != null){ tts.stop(); tts.shutdown(); } } catch(Exception ignored){}
         try { if (fv != null && wm != null) wm.removeView(fv); } catch (Exception e) {}
         try { if(web != null) web.destroy(); } catch(Exception ignored){}
     }
-}
+                          }
