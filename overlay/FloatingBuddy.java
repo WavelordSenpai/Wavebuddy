@@ -30,6 +30,8 @@ public class FloatingBuddy extends Service {
     private int startX = 0, startY = 0;
     private int screenW = 1080, screenH = 1920;
     private boolean chatOpen = false;
+    private float density = 2.6f;
+    private int dp(int v){ return (int)(v * density + 0.5f); }
     @Override public IBinder onBind(Intent intent) { return null; }
     @Override public void onCreate() {
         super.onCreate();
@@ -53,6 +55,7 @@ public class FloatingBuddy extends Service {
             }
         } catch (Exception ignored) {}
         wm = (WindowManager) getSystemService(WINDOW_SERVICE);
+        density = getResources().getDisplayMetrics().density;
         screenW = getResources().getDisplayMetrics().widthPixels;
         screenH = getResources().getDisplayMetrics().heightPixels;
         web = new WebView(this);
@@ -74,12 +77,12 @@ public class FloatingBuddy extends Service {
         web.loadUrl("file:///android_asset/public/index.html?mode=mini&overlay=1");
         int type = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_PHONE;
         params = new WindowManager.LayoutParams(
-            200, 260, type,
+            dp(200), dp(260), type,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
             PixelFormat.TRANSLUCENT);
         params.gravity = Gravity.TOP | Gravity.LEFT;
-        params.x = screenW - 340;
-        params.y = 400;
+        params.x = screenW - dp(220);
+        params.y = dp(400);
         web.setOnTouchListener(new View.OnTouchListener(){
             @Override public boolean onTouch(View v, MotionEvent e){
                 switch(e.getAction()){
@@ -161,9 +164,10 @@ public class FloatingBuddy extends Service {
                         if(nw < 200) nw = 200;
                         if(nh < 260) nh = 260;
                     }
-                    params.width = nw; params.height = nh;
-                    if(params.y + nh > screenH) params.y = screenH - nh;
+                    params.width = dp(nw); params.height = dp(nh);
+                    if(params.y + params.height > screenH) params.y = screenH - params.height;
                     if(params.y < 0) params.y = 0;
+                    if(params.x + params.width > screenW) params.x = screenW - params.width;
                     wm.updateViewLayout(web, params);
                     updateFocus();
                 }catch(Exception ignored){}
@@ -175,4 +179,4 @@ public class FloatingBuddy extends Service {
         try{ if(tts != null){ tts.stop(); tts.shutdown(); } }catch(Exception ignored){}
         try{ if(web != null) wm.removeView(web); }catch(Exception ignored){}
     }
-}
+        }
