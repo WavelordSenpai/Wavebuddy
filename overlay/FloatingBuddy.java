@@ -113,8 +113,8 @@ public class FloatingBuddy extends Service {
                         boolean wasDragging = dragging;
                         dragging = false;
                         if(!wasDragging && (System.currentTimeMillis() - downTime) < 400){
-                            try{ web.post(() -> web.evaluateJavascript("if(window.onBuddyTap) onBuddyTap(new Event('tap')); else document.getElementById('buddyWrap').click();", null)); }catch(Exception ignored){}
-                            return false;
+                            try{ web.evaluateJavascript("if(window.onBuddyTap) onBuddyTap(new Event('tap'));", null); }catch(Exception ignored){}
+                            return true;
                         }
                         return wasDragging;
                 }
