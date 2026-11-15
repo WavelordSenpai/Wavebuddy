@@ -51,11 +51,26 @@ jobs:
           DEST=android/app/src/main/java/com/wavelord/wavebuddy
           mkdir -p $DEST
           if [ -d overlay ]; then
-            cp overlay/*.java $DEST/ 2>/dev/null || true
+            echo "--- Files in overlay/ BEFORE copy ---"
+            ls -l overlay/
+            echo "--- Cleaning Capacitor-generated MainActivity (prevents duplicate class) ---"
+            rm -f $DEST/*.java
+            ls -l $DEST/ || echo "(DEST now empty, good)"
+            cp overlay/*.java $DEST/
             echo "--- Overlay files copied ---"
             ls -l $DEST/
-            echo "--- Check FloatingBuddy dragBar ---"
-            grep -n "dragBar.setBackgroundColor" $DEST/FloatingBuddy.java || echo "dragBar line not found"
+            echo "--- VALIDATION: each file must contain ONLY its own class ---"
+            echo "MainActivity.java should contain 1x 'public class MainActivity' and 0x 'FloatingBuddy extends':"
+            grep -c "public class MainActivity" $DEST/MainActivity.java || echo "❌ MainActivity.java missing MainActivity class"
+            grep -c "public class FloatingBuddy" $DEST/MainActivity.java && echo "❌ ERROR: MainActivity.java contains FloatingBuddy class - duplicate!" && exit 1 || echo "✅ MainActivity.java clean"
+            echo "FloatingBuddy.java should contain 1x 'public class FloatingBuddy' and 0x 'class MainActivity':"
+            grep -c "public class FloatingBuddy" $DEST/FloatingBuddy.java || echo "❌ FloatingBuddy.java missing FloatingBuddy class"
+            grep -c "class MainActivity" $DEST/FloatingBuddy.java && echo "❌ ERROR: FloatingBuddy.java contains MainActivity class - THIS IS THE DUPLICATE BUG!" && exit 1 || echo "✅ FloatingBuddy.java clean"
+            echo "--- Full class list in DEST ---"
+            grep -h "public class" $DEST/*.java
+          else
+            echo "❌ overlay/ folder not found!"
+            exit 1
           fi
 
           # --- FIX MANIFEST - use YOUR root AndroidManifest.xml ---
@@ -63,7 +78,6 @@ jobs:
             cp AndroidManifest.xml android/app/src/main/AndroidManifest.xml
             echo "Copied YOUR AndroidManifest.xml"
           fi
-          # Force icon into manifest even if root manifest forgot it
           if ! grep -q 'android:icon=' android/app/src/main/AndroidManifest.xml; then
             echo "⚠️ Manifest missing icon, patching it"
             sed -i 's|<application| <application android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round"|' android/app/src/main/AndroidManifest.xml
