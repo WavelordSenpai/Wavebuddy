@@ -8,7 +8,7 @@ import android.widget.LinearLayout; import android.speech.tts.TextToSpeech; impo
 public class FloatingBuddy extends Service {
     private WindowManager wm; private View fv; private WindowManager.LayoutParams params; private WebView web; private TextToSpeech tts;
     private int screenW = 1080; private int screenH = 1920;
-    private int initX, initY; private float downX, downY; private boolean dragging = false;
+    private int initX, initY; private float downX, downY; private boolean dragging = false; private boolean isMiniChatOpen = false;
     private void doSpeak(String t){
         if(t == null) return; String clean = t.replaceAll("<[^>]*>", "").replaceAll("\\s+", " ").trim(); if(clean.isEmpty()) return; if(clean.length()>250) clean = clean.substring(0,250); final String toSay = clean;
         try{
@@ -59,21 +59,7 @@ public class FloatingBuddy extends Service {
                     }catch(Exception ignored){}
                 });
             }
-            @JavascriptInterface public void moveWindow(int dx, int dy){
-                try{
-                    android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
-                    h.post(() -> {
-                        try{
-                            params.x += dx; params.y += dy;
-                            if(params.x < -20) params.x = -20;
-                            if(params.x > screenW - 100) params.x = screenW - 100;
-                            if(params.y < 0) params.y = 0;
-                            if(params.y > screenH - 100) params.y = screenH - 100;
-                            wm.updateViewLayout(fv, params);
-                        }catch(Exception ignored){}
-                    });
-                }catch(Exception ignored){}
-            }
+            @JavascriptInterface public void moveWindow(int dx, int dy){}
         }, "AndroidMini");
         web.setWebViewClient(new WebViewClient(){
             @Override public boolean shouldOverrideUrlLoading(WebView v, String u){ return handle(u); }
@@ -93,12 +79,16 @@ public class FloatingBuddy extends Service {
         params.gravity = Gravity.TOP | Gravity.START;
         params.x = centerX; params.y = 200;
         try { wm.addView(fv, params); } catch (Exception e) {}
-        root.setOnTouchListener(new View.OnTouchListener(){
+        // FIX: drag is on WebView itself, tap passes through, drag moves window
+        web.setOnTouchListener(new View.OnTouchListener(){
             @Override public boolean onTouch(View v, MotionEvent e){
-                if(e.getAction() == MotionEvent.ACTION_DOWN){ initX = params.x; initY = params.y; downX = e.getRawX(); downY = e.getRawY(); dragging = false; return false; }
+                if(e.getAction() == MotionEvent.ACTION_DOWN){
+                    initX = params.x; initY = params.y; downX = e.getRawX(); downY = e.getRawY(); dragging = false;
+                    return false;
+                }
                 if(e.getAction() == MotionEvent.ACTION_MOVE){
                     float dx = e.getRawX() - downX; float dy = e.getRawY() - downY;
-                    if(Math.abs(dx) > 5 || Math.abs(dy) > 5) dragging = true;
+                    if(!dragging && (Math.abs(dx) > 12 || Math.abs(dy) > 12)) dragging = true;
                     if(dragging){
                         params.x = initX + (int)dx; params.y = initY + (int)dy;
                         if(params.x < -20) params.x = -20; if(params.x > screenW - 100) params.x = screenW - 100; if(params.y < 0) params.y = 0; if(params.y > screenH - 100) params.y = screenH - 100;
@@ -107,7 +97,11 @@ public class FloatingBuddy extends Service {
                     }
                     return false;
                 }
-                if(e.getAction() == MotionEvent.ACTION_UP || e.getAction() == MotionEvent.ACTION_CANCEL){ dragging = false; return false; }
+                if(e.getAction() == MotionEvent.ACTION_UP || e.getAction() == MotionEvent.ACTION_CANCEL){
+                    boolean wasDragging = dragging; dragging = false;
+                    if(wasDragging) return true;
+                    return false;
+                }
                 return false;
             }
         });
@@ -120,4 +114,4 @@ public class FloatingBuddy extends Service {
         try { if (fv != null && wm != null) wm.removeView(fv); } catch (Exception e) {}
         try { if(web != null) web.destroy(); } catch(Exception ignored){}
     }
-}
+        }
