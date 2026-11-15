@@ -26,6 +26,7 @@ public class FloatingBuddy extends Service {
     private WindowManager wm; private View fv; private WindowManager.LayoutParams params; private WebView web; private TextToSpeech tts;
     private int screenW = 1080; private int screenH = 1920;
     private int initX, initY; private float downX, downY; private boolean dragging = false; private long downTime = 0;
+    private boolean chatOpen = false;
     private void doSpeak(String t){
         if(t == null) return; String clean = t.replaceAll("<[^>]*>", "").replaceAll("\\s+", " ").trim(); if(clean.isEmpty()) return; if(clean.length()>250) clean = clean.substring(0,250); final String toSay = clean;
         try{
@@ -36,6 +37,16 @@ public class FloatingBuddy extends Service {
         }catch(Exception ignored){}
     }
     @Override public IBinder onBind(Intent i) { return null; }
+    private void updateFocus(){
+        try{
+            if(chatOpen){
+                params.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL;
+            } else {
+                params.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL;
+            }
+            wm.updateViewLayout(fv, params);
+        }catch(Exception ignored){}
+    }
     @Override public void onCreate() {
         super.onCreate();
         String chId = "wavebuddy_floating";
@@ -69,11 +80,13 @@ public class FloatingBuddy extends Service {
                 android.os.Handler hh = new android.os.Handler(android.os.Looper.getMainLooper());
                 hh.post(() -> {
                     try{
+                        chatOpen = (w > 250);
                         params.width = w; params.height = h;
                         if(params.x + w > screenW) params.x = screenW - w;
                         if(params.x < 0) params.x = 0;
                         if(params.y + h > screenH) params.y = screenH - h;
                         if(params.y < 0) params.y = 0;
+                        updateFocus();
                         wm.updateViewLayout(fv, params);
                     }catch(Exception ignored){}
                 });
@@ -92,16 +105,21 @@ public class FloatingBuddy extends Service {
         DisplayMetrics dm = new DisplayMetrics(); try{ wm.getDefaultDisplay().getMetrics(dm); }catch(Exception ignored){}
         screenW = dm.widthPixels > 0 ? dm.widthPixels : 1080;
         screenH = dm.heightPixels > 0 ? dm.heightPixels : 1920;
-        int winW = 180; int winH = 210;
+        int winW = 200; int winH = 260;
         int centerX = (screenW - winW) / 2; if(centerX < 0) centerX = 0;
-        params = new WindowManager.LayoutParams(winW, winH, type, WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL, PixelFormat.TRANSLUCENT);
+        params = new WindowManager.LayoutParams(winW, winH, type, WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL, PixelFormat.TRANSLUCENT);
         params.gravity = Gravity.TOP | Gravity.START;
         params.x = centerX; params.y = 200;
         try { wm.addView(fv, params); } catch (Exception e) {}
-        fv.setOnTouchListener(new View.OnTouchListener(){
+
+        // FIX: touch listener MUST be on the WebView, not the outer layout.
+        // WebView eats touches otherwise and tap/drag never fire.
+        web.setOnTouchListener(new View.OnTouchListener(){
             @Override public boolean onTouch(View v, MotionEvent e){
                 if(e.getAction() == MotionEvent.ACTION_DOWN){
                     initX = params.x; initY = params.y; downX = e.getRawX(); downY = e.getRawY(); dragging = false; downTime = System.currentTimeMillis();
+                    // Let WebView see DOWN so buttons / inputs still get focus when chat is open
+                    // We return false here, we decide on UP / MOVE
                     return false;
                 }
                 if(e.getAction() == MotionEvent.ACTION_MOVE){
@@ -122,6 +140,8 @@ public class FloatingBuddy extends Service {
                     float totalDy = Math.abs(e.getRawY() - downY);
                     dragging = false;
                     if(wasDragging) return true;
+                    // If chat is open, let WebView handle taps on buttons / input (don't hijack)
+                    if(chatOpen) return false;
                     if(tapTime < 600 && totalDx < 15 && totalDy < 15){
                         try{ web.post(() -> { try{ web.evaluateJavascript("if(typeof onBuddyTap==='function'){onBuddyTap({stopPropagation:function(){}})}", null); }catch(Exception ignored){} }); }catch(Exception ignored){}
                         return true;
@@ -141,4 +161,4 @@ public class FloatingBuddy extends Service {
         try { if (fv != null && wm != null) wm.removeView(fv); } catch (Exception e) {}
         try { if(web != null) web.destroy(); } catch(Exception ignored){}
     }
-                                                                                                      }
+                    }
