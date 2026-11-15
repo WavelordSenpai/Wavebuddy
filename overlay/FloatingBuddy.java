@@ -59,7 +59,7 @@ public class FloatingBuddy extends Service {
             : WindowManager.LayoutParams.TYPE_PHONE;
 
         params = new WindowManager.LayoutParams(
-            320, 280, type,
+    180, 220, type,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
             PixelFormat.TRANSLUCENT);
         params.gravity = Gravity.TOP | Gravity.LEFT;
