@@ -78,13 +78,18 @@ public class FloatingBuddy extends Service {
         int type = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_PHONE;
         params = new WindowManager.LayoutParams(
             dp(200), dp(260), type,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
             PixelFormat.TRANSLUCENT);
         params.gravity = Gravity.TOP | Gravity.LEFT;
         params.x = screenW - dp(220);
         params.y = dp(400);
         web.setOnTouchListener(new View.OnTouchListener(){
             @Override public boolean onTouch(View v, MotionEvent e){
+                // FIX: When menu / chat is open, NEVER drag. Let all taps go to buttons.
+                if (chatOpen) {
+                    dragging = false;
+                    return false;
+                }
                 switch(e.getAction()){
                     case MotionEvent.ACTION_DOWN:
                         dragging = false;
@@ -97,10 +102,12 @@ public class FloatingBuddy extends Service {
                     case MotionEvent.ACTION_MOVE:
                         float dx = e.getRawX() - downX;
                         float dy = e.getRawY() - downY;
-                        if(!dragging && (Math.abs(dx) > 22 || Math.abs(dy) > 22)){
+                        if(!dragging && (Math.abs(dx) > 35 || Math.abs(dy) > 35)){
                             dragging = true;
                         }
                         if(dragging){
+                            // FIX: Ignore huge jumps (from window resize / tap jitter)
+                            if (Math.abs(dx) > 300 || Math.abs(dy) > 300) return false;
                             params.x = startX + (int)dx;
                             params.y = startY + (int)dy;
                             if(params.x < 0) params.x = 0;
@@ -115,10 +122,6 @@ public class FloatingBuddy extends Service {
                     case MotionEvent.ACTION_CANCEL:
                         boolean wasDragging = dragging;
                         dragging = false;
-                        if(!wasDragging && (System.currentTimeMillis() - downTime) < 400){
-                            try{ web.evaluateJavascript("if(window.onBuddyTap) onBuddyTap(new Event('tap'));", null); }catch(Exception ignored){}
-                            return true;
-                        }
                         return wasDragging;
                 }
                 return false;
@@ -154,6 +157,11 @@ public class FloatingBuddy extends Service {
             try{ if(tts != null) tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "wb1"); }catch(Exception ignored){}
         }
         @JavascriptInterface public void testVoice(){ speak("Hello! This is Wave Buddy. Can you hear me now?"); }
+        @JavascriptInterface public void setChatOpen(final boolean open){
+            new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
+                try{ chatOpen = open; updateFocus(); }catch(Exception ignored){}
+            });
+        }
         @JavascriptInterface public void setWindowSize(final int w, final int h){
             new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
                 try{
@@ -179,4 +187,4 @@ public class FloatingBuddy extends Service {
         try{ if(tts != null){ tts.stop(); tts.shutdown(); } }catch(Exception ignored){}
         try{ if(web != null) wm.removeView(web); }catch(Exception ignored){}
     }
-        }
+            }
