@@ -10,7 +10,6 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.webkit.JavascriptInterface;
-import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.speech.tts.TextToSpeech;
@@ -24,7 +23,7 @@ public class FloatingBuddy extends Service {
     private WindowManager.LayoutParams params;
     private WebView web;
     private TextToSpeech tts;
-    private boolean dragging = false;
+    private boolean isDragging = false;
     private float downX = 0, downY = 0;
     private int startX = 0, startY = 0;
     private int screenW = 1080, screenH = 1920;
@@ -32,7 +31,9 @@ public class FloatingBuddy extends Service {
     private boolean miniChatOpen = false;
     private float density = 2.6f;
     private int dp(int v){ return (int)(v * density + 0.5f); }
+
     @Override public IBinder onBind(Intent intent) { return null; }
+
     @Override public void onCreate() {
         super.onCreate();
         try {
@@ -62,7 +63,6 @@ public class FloatingBuddy extends Service {
         web.getSettings().setJavaScriptEnabled(true);
         web.getSettings().setDomStorageEnabled(true);
         web.getSettings().setMediaPlaybackRequiresUserGesture(false);
-        web.setBackgroundColor(android.graphics.Color.TRANSPARENT);
         web.setBackgroundColor(0);
         web.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         web.addJavascriptInterface(new MiniBridge(), "AndroidMini");
@@ -83,122 +83,86 @@ public class FloatingBuddy extends Service {
         params.gravity = Gravity.TOP | Gravity.LEFT;
         params.x = screenW - dp(220);
         params.y = dp(400);
+
+        // === FIXED TOUCH: TAP vs DRAG ===
         web.setOnTouchListener(new View.OnTouchListener(){
             @Override public boolean onTouch(View v, MotionEvent e){
-                // FIX: If AI box is open, Java NEVER drags. JS drags the AI box inside.
                 if (miniChatOpen) {
-                    dragging = false;
-                    return false;
+                    isDragging = false;
+                    return false; // let JS handle chat box
                 }
                 switch(e.getAction()){
                     case MotionEvent.ACTION_DOWN:
-                        dragging = false;
+                        isDragging = false;
                         downX = e.getRawX();
                         downY = e.getRawY();
                         startX = params.x;
                         startY = params.y;
-                        return false;
-                    case MotionEvent.ACTION_MOVE:
+                        return false; // don't consume yet, let tap work
+                    case MotionEvent.ACTION_MOVE: {
                         float dx = e.getRawX() - downX;
                         float dy = e.getRawY() - downY;
-                        if(!dragging && (Math.abs(dx) > 35 || Math.abs(dy) > 35)){
-                            if (chatOpen) {
-                                float touchYInWindow = e.getY();
-                                if (touchYInWindow > dp(110)) return false;
-                            }
-                            dragging = true;
+                        // Only start dragging after 12px - this is the tap fix
+                        if (!isDragging && Math.hypot(dx, dy) > 12) {
+                            isDragging = true;
                         }
-                        if(dragging){
-                            if (Math.abs(dx) > 300 || Math.abs(dy) > 300) return false;
+                        if (isDragging) {
                             params.x = startX + (int)dx;
                             params.y = startY + (int)dy;
-                            if(params.x < 0) params.x = 0;
-                            if(params.y < 0) params.y = 0;
-                            if(params.x + params.width > screenW) params.x = screenW - params.width;
-                            if(params.y + params.height > screenH) params.y = screenH - params.height;
-                            try{ wm.updateViewLayout(web, params); }catch(Exception ignored){}
-                            return true;
+                            // Keep on screen
+                            params.x = Math.max(0, Math.min(screenW - dp(200), params.x));
+                            params.y = Math.max(0, Math.min(screenH - dp(260), params.y));
+                            try { wm.updateViewLayout(web, params); } catch(Exception ignored){}
+                            return true; // we are dragging, consume it
                         }
                         return false;
+                    }
                     case MotionEvent.ACTION_UP:
-                    case MotionEvent.ACTION_CANCEL:
-                        boolean wasDragging = dragging;
-                        dragging = false;
+                    case MotionEvent.ACTION_CANCEL: {
+                        boolean wasDragging = isDragging;
+                        isDragging = false;
+                        // If it was a drag, consume UP so JS doesn't fire a tap
+                        // If it was a tap, return false so JS onBuddyTap fires
                         return wasDragging;
+                    }
                 }
                 return false;
             }
         });
-        try{ wm.addView(web, params); }catch(Exception ignored){}
-        tts = new TextToSpeech(this, status -> {
-            if(status == TextToSpeech.SUCCESS){
-                try{ tts.setLanguage(Locale.US); }catch(Exception ignored){}
-            }
-        });
+        wm.addView(web, params);
     }
-    private void openApp(){
-        try{
-            Intent i = new Intent(this, MainActivity.class);
-            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-            startActivity(i);
-        }catch(Exception ignored){}
-        stopSelf();
-    }
-    private void updateFocus(){
-        try{
-            if(chatOpen) params.flags &= ~WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
-            else params.flags |= WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
-            wm.updateViewLayout(web, params);
-        }catch(Exception ignored){}
-    }
+
     public class MiniBridge {
         @JavascriptInterface public void minimize(){}
-        @JavascriptInterface public void expand(){ openApp(); }
+        @JavascriptInterface public void expand(){}
         @JavascriptInterface public void exit(){ stopSelf(); }
-        @JavascriptInterface public void speak(final String text){
-            try{ if(tts != null) tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "wb1"); }catch(Exception ignored){}
+        @JavascriptInterface public void setWindowSize(int w, int h){
+            try {
+                params.width = dp(w); params.height = dp(h);
+                wm.updateViewLayout(web, params);
+            } catch(Exception ignored){}
+        }
+        @JavascriptInterface public void setChatOpen(boolean open){ chatOpen = open; }
+        @JavascriptInterface public void setMiniChatOpen(boolean open){ miniChatOpen = open; }
+        @JavascriptInterface public void setWindowSize(int w, int h, boolean dummy){ setWindowSize(w,h); }
+        @JavascriptInterface public void speak(String text){
+            try {
+                if (tts == null) {
+                    tts = new TextToSpeech(FloatingBuddy.this, status -> {
+                        if (status == TextToSpeech.SUCCESS) {
+                            tts.setLanguage(Locale.US);
+                            tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "wb1");
+                        }
+                    });
+                } else tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "wb1");
+            } catch(Exception ignored){}
         }
         @JavascriptInterface public void testVoice(){ speak("Hello! This is Wave Buddy. Can you hear me now?"); }
-        @JavascriptInterface public void setChatOpen(final boolean open){
-            new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
-                try{ chatOpen = open; updateFocus(); }catch(Exception ignored){}
-            });
-        }
-        @JavascriptInterface public void setMiniChatOpen(final boolean open){
-            new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
-                try{ miniChatOpen = open; }catch(Exception ignored){}
-            });
-        }
-        @JavascriptInterface public void setWindowSize(final int w, final int h){
-            new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
-                try{
-                    chatOpen = (w > 250);
-                    // FIX: X = keep CENTER (Crystal is centered left-right)
-                    // FIX: Y = keep TOP (Crystal is at top, do NOT move Y up)
-                    int oldCenterX = params.x + params.width / 2;
-                    int oldTopY = params.y;
-                    int nw = w;
-                    int nh = h;
-                    if(!chatOpen){
-                        if(nw < 200) nw = 200;
-                        if(nh < 260) nh = 260;
-                    }
-                    params.width = dp(nw); params.height = dp(nh);
-                    params.x = oldCenterX - params.width / 2;
-                    params.y = oldTopY;
-                    if(params.y + params.height > screenH) params.y = screenH - params.height;
-                    if(params.y < 0) params.y = 0;
-                    if(params.x + params.width > screenW) params.x = screenW - params.width;
-                    if(params.x < 0) params.x = 0;
-                    wm.updateViewLayout(web, params);
-                    updateFocus();
-                }catch(Exception ignored){}
-            });
-        }
     }
+
     @Override public void onDestroy(){
         super.onDestroy();
-        try{ if(tts != null){ tts.stop(); tts.shutdown(); } }catch(Exception ignored){}
-        try{ if(web != null) wm.removeView(web); }catch(Exception ignored){}
+        try { if (web != null) wm.removeView(web); } catch(Exception ignored){}
+        try { if (tts != null) tts.shutdown(); } catch(Exception ignored){}
     }
-                           }
+}
