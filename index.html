@@ -6,6 +6,17 @@
 <meta name="theme-color" content="#0A0A0A">
 <title>Wave Buddy V3.5 FINAL</title>
 <style>
+	html.mini-mode, body.mini-mode,
+body.mini-mode #landing, body.mini-mode #buddyWrap {
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+body.mini-mode #landing { padding: 0 !important; }
+body.mini-mode #chatPanel { display: none !important; }
+body.mini-mode #header, body.mini-mode #welcomeText, body.mini-mode #minimizeBtn {
+  display: none !important;
+}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important}
 html,body{background:#0A0A0A}
 html.mini-mode, body.mini-mode, body.mini-mode #room{background:transparent !important;background-image:none !important}
@@ -122,8 +133,13 @@ body.chatting #captionBubble{display:none!important}
 .avatarChip{padding:5px 8px;border-radius:999px;border:1px solid #555;background:#222;color:#fff;font-size:10px;font-weight:800;cursor:pointer}
 .avatarChip.active{background:#FFD700;color:#000;border-color:#FFD700}
 #minimizeBtn{display:block;position:absolute;top:10px;right:10px;z-index:99999;background:#FFD700;color:#000;border:none;padding:9px 13px;border-radius:999px;font-weight:900;font-size:11px;cursor:pointer}
-body.mini-mode #minimizeBtn{display:none!important}
-body.chatting #minimizeBtn{display:none!important}
+body.mini-mode #minimizeBtn { display: none !important; }
+body.chatting #minimizeBtn { display: none !important; }
+body.mini-mode #header,
+body.mini-mode #hdre,
+body.mini-mode #welcomeText {
+  display: none !important;
+}
 body.mini-mode{overflow:hidden !important;background:transparent !important;touch-action:manipulation;}
 body.mini-mode #room{pointer-events:none !important;overflow:hidden !important;}
 body.mini-mode #buddyWrap, body.mini-mode #miniChat, body.mini-mode #miniOptions{pointer-events:auto !important;}
@@ -212,6 +228,13 @@ body.chatting #hint{opacity:0!important}
   <div id="hint">drag buddy • tap to open/close • hold = cycle all 5 Platonic Solids + Robo</div>
 </div>
 <script>
+	const isMini = window.location.href.includes('mode=mini') || window.location.href.includes('overlay=1');
+if (isMini) {
+  document.documentElement.classList.add('mini-mode');
+  document.addEventListener('DOMContentLoaded', () => {
+    document.body.classList.add('mini-mode');
+  });
+}
 	document.addEventListener('contextmenu',function(e){e.preventDefault();return false;});
 document.addEventListener('selectstart',function(e){if(e.target.tagName!=='INPUT'&&e.target.tagName!=='TEXTAREA')e.preventDefault();});
 var TIMING={idleMin:7000,idleMax:11000,moveDuration:2600,captionEvery:120000};
