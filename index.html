@@ -212,7 +212,7 @@ body.chatting #hint{opacity:0!important}
   <div id="hint">drag buddy • tap to open/close • hold = cycle all 5 Platonic Solids + Robo</div>
 </div>
 <script>
-document.addEventListener('contextmenu',function(e){e.preventDefault();return false;});
+	document.addEventListener('contextmenu',function(e){e.preventDefault();return false;});
 document.addEventListener('selectstart',function(e){if(e.target.tagName!=='INPUT'&&e.target.tagName!=='TEXTAREA')e.preventDefault();});
 var TIMING={idleMin:7000,idleMax:11000,moveDuration:2600,captionEvery:120000};
 var AI_URL='https://wavebuddy.netlify.app/.netlify/functions/ai';
@@ -222,12 +222,10 @@ var IS_MINI=window.location.search.indexOf('mode=mini')!==-1;
 if(window.location.search.indexOf('overlay=1')!==-1){document.body.classList.add('overlay');document.documentElement.classList.add('overlay');}
 if(IS_MINI){document.body.classList.add('overlay');document.documentElement.classList.add('overlay');document.body.classList.add('mini-mode');document.documentElement.classList.add('mini-mode');setTimeout(function(){if(window.AndroidMini && window.AndroidMini.setWindowSize){try{window.AndroidMini.setWindowSize(200,260);}catch(err){}}},500);}
 function isMiniMode(){return document.body.classList.contains('mini-mode')||IS_MINI;}
+
+// FIXED: missing } added back, no more stray code after it
 function tryMinimize(e){
   if(e) e.stopPropagation();
-  if(isMiniMode()) return;
-  if(window.AndroidMini && window.AndroidMini.minimize){
-    try{ window.AndroidMini.minimize(); return; }catch(err){}
-  }
   document.body.classList.add('mini-mode');
   document.documentElement.classList.add('mini-mode');
   document.body.classList.add('overlay');
@@ -236,6 +234,16 @@ function tryMinimize(e){
   var mc = document.getElementById('miniChat');
   if(mc) mc.classList.remove('open');
   showThought('✨ Mini mode! Tap me, then Home to go back');
+  if(window.AndroidMini && window.AndroidMini.setWindowSize){
+    try{ window.AndroidMini.setWindowSize(200,260); }catch(err){}
+  }
+}
+function tryExpand(){
+  document.body.classList.remove('mini-mode');
+  document.body.classList.remove('minimized-bubble');
+  if(window.AndroidMini && window.AndroidMini.expand){
+    window.AndroidMini.expand();
+  }
 }
 function tryExpandFromDemo(e){if(e)e.stopPropagation();if(window.AndroidMini&&window.AndroidMini.expand){try{window.AndroidMini.expand();}catch(err){}}document.body.classList.remove('mini-mode');document.documentElement.classList.remove('mini-mode');var wrap=document.getElementById('buddyWrap');wrap.style.left='50%';wrap.style.top='58%';wrap.style.transform='translate(-50%,-50%)';var mc=document.getElementById('miniChat');if(mc)mc.classList.remove('open');}
 function sayGoodbye(e){if(e)e.stopPropagation();showThought('👋 Bye! See you soon!');setSpriteState('wavingSlow',1500,'happy');setTimeout(function(){if(window.AndroidMini&&window.AndroidMini.exit){try{window.AndroidMini.exit();return;}catch(err){}}try{window.close();}catch(err){}document.body.innerHTML='<div style="background:#0A0A0A;color:#fff;height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;font-family:Arial;padding:20px"><div><div style="font-size:48px">👋</div><h2>Bye! See you soon!</h2><p>Wave Buddy has gone to sleep.</p></div></div>';},900);}
@@ -365,4 +373,4 @@ document.addEventListener('keydown', function(e){
 scheduleIdle();
 </script>
 </body>
-                                                                                                                                                                                                                                                                                              </html>
+</html>
