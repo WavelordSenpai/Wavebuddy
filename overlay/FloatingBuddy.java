@@ -1,22 +1,22 @@
 package com.wavelord.wavebuddy;
 
-import 【entity-android¦canonical_name=Android】.app.Service;
-import 【entity-android¦canonical_name=Android】.content.Intent;
-import 【entity-android¦canonical_name=Android】.graphics.PixelFormat;
-import 【entity-android¦canonical_name=Android】.os.Build;
-import 【entity-android¦canonical_name=Android】.os.IBinder;
-import 【entity-android¦canonical_name=Android】.view.Gravity;
-import 【entity-android¦canonical_name=Android】.view.MotionEvent;
-import 【entity-android¦canonical_name=Android】.view.View;
-import 【entity-android¦canonical_name=Android】.view.WindowManager;
-import 【entity-android¦canonical_name=Android】.webkit.JavascriptInterface;
-import 【entity-android¦canonical_name=Android】.webkit.WebResourceRequest;
-import 【entity-android¦canonical_name=Android】.webkit.WebView;
-import 【entity-android¦canonical_name=Android】.webkit.WebViewClient;
-import 【entity-android¦canonical_name=Android】.speech.tts.TextToSpeech;
-import 【entity-android¦canonical_name=Android】.app.Notification;
-import 【entity-android¦canonical_name=Android】.app.NotificationChannel;
-import 【entity-android¦canonical_name=Android】.app.NotificationManager;
+import android.app.Service;
+import android.content.Intent;
+import android.graphics.PixelFormat;
+import android.os.Build;
+import android.os.IBinder;
+import android.view.Gravity;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.WindowManager;
+import android.webkit.JavascriptInterface;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
+import android.speech.tts.TextToSpeech;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import java.util.Locale;
 
 public class FloatingBuddy extends Service {
@@ -46,12 +46,12 @@ public class FloatingBuddy extends Service {
             }
             Notification n;
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                n = new Notification.Builder(this, chId).setContentTitle("Wave Buddy").setContentText("Buddy is floating").setSmallIcon(【entity-android¦canonical_name=Android】.R.drawable.ic_dialog_info).build();
+                n = new Notification.Builder(this, chId).setContentTitle("Wave Buddy").setContentText("Buddy is floating").setSmallIcon(android.R.drawable.ic_dialog_info).build();
             } else {
-                n = new Notification.Builder(this).setContentTitle("Wave Buddy").setContentText("Buddy is floating").setSmallIcon(【entity-android¦canonical_name=Android】.R.drawable.ic_dialog_info).build();
+                n = new Notification.Builder(this).setContentTitle("Wave Buddy").setContentText("Buddy is floating").setSmallIcon(android.R.drawable.ic_dialog_info).build();
             }
             if (Build.VERSION.SDK_INT >= 29) {
-                startForeground(1, n, 【entity-android¦canonical_name=Android】.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
+                startForeground(1, n, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
             } else {
                 startForeground(1, n);
             }
