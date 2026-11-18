@@ -58,7 +58,6 @@ public class MainActivity extends Activity {
         web.addJavascriptInterface(new AndroidMini(), "AndroidMini");
         web.loadUrl("file:///android_asset/public/index.html");
         setContentView(web);
-        // DO NOT auto-start FloatingBuddy here - only on MINIMIZE
     }
 
     private void startBuddy() {
@@ -69,6 +68,8 @@ public class MainActivity extends Activity {
             } else {
                 startService(s);
             }
+            // THIS IS THE KEY: whole app collapses, only floating Crystal stays
+            moveTaskToBack(true);
         } catch (Exception e) {
             Toast.makeText(this, "Could not start floating buddy: " + e.getMessage(), Toast.LENGTH_LONG).show();
         }
