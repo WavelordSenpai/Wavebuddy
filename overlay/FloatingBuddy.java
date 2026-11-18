@@ -50,10 +50,14 @@ public class FloatingBuddy extends Service {
             } else {
                 n = new Notification.Builder(this).setContentTitle("Wave Buddy").setContentText("Buddy is floating").setSmallIcon(android.R.drawable.ic_dialog_info).build();
             }
-            if (Build.VERSION.SDK_INT >= 29) {
-                startForeground(1, n, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
-            } else {
-                startForeground(1, n);
+            try {
+                if (Build.VERSION.SDK_INT >= 29) {
+                    startForeground(1, n, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
+                } else {
+                    startForeground(1, n);
+                }
+            } catch (Exception e) {
+                try { startForeground(1, n); } catch (Exception ignored) {}
             }
         } catch (Exception ignored) {}
         wm = (WindowManager) getSystemService(WINDOW_SERVICE);
@@ -109,8 +113,8 @@ public class FloatingBuddy extends Service {
                         if (isDragging) {
                             params.x = startX + (int)dx;
                             params.y = startY + (int)dy;
-                            params.x = Math.max(0, Math.min(screenW - dp(200), params.x));
-                            params.y = Math.max(0, Math.min(screenH - dp(260), params.y));
+                            params.x = Math.max(0, Math.min(screenW - dp(70), params.x));
+                            params.y = Math.max(0, Math.min(screenH - dp(70), params.y));
                             try { wm.updateViewLayout(web, params); } catch(Exception ignored){}
                             return true;
                         }
@@ -130,12 +134,36 @@ public class FloatingBuddy extends Service {
     }
 
     public class MiniBridge {
-        @JavascriptInterface public void minimize(){}
-        @JavascriptInterface public void expand(){}
+        @JavascriptInterface public void minimize(){
+            try {
+                params.width = dp(70);
+                params.height = dp(70);
+                if (params.x < 0) params.x = 10;
+                if (params.y < 0) params.y = 100;
+                if (params.x > screenW - dp(80)) params.x = screenW - dp(80);
+                if (params.y > screenH - dp(80)) params.y = screenH - dp(80);
+                wm.updateViewLayout(web, params);
+            } catch(Exception ignored){}
+        }
+        @JavascriptInterface public void expand(){
+            try {
+                params.width = dp(200);
+                params.height = dp(260);
+                wm.updateViewLayout(web, params);
+                web.evaluateJavascript("document.body.classList.remove('mini-mode'); document.body.classList.remove('minimized-bubble');", null);
+            } catch(Exception ignored){}
+        }
         @JavascriptInterface public void exit(){ stopSelf(); }
         @JavascriptInterface public void setWindowSize(int w, int h){
             try {
-                params.width = dp(w); params.height = dp(h);
+                if (w < 60) w = 70;
+                if (h < 60) h = 70;
+                params.width = dp(w);
+                params.height = dp(h);
+                if (params.x < 0) params.x = 10;
+                if (params.y < 0) params.y = 100;
+                if (params.x > screenW - dp(80)) params.x = screenW - dp(80);
+                if (params.y > screenH - dp(80)) params.y = screenH - dp(80);
                 wm.updateViewLayout(web, params);
             } catch(Exception ignored){}
         }
