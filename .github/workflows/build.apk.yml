@@ -31,18 +31,22 @@ jobs:
           if [ ! -d android ]; then npx cap add android || true; fi
           npx cap sync android
 
-          # --- FIX ICON - FAIL LOUDLY IF MISSING ---
-          if [ ! -f icon.png ]; then
-            echo "❌ ERROR: icon.png NOT FOUND in repo root - build would use robot icon"
-            ls -la *.png || true
+          # --- FIX ICON - USE resources/icon.png ---
+          if [ -f resources/icon.png ]; then
+            ICON_SRC="resources/icon.png"
+          elif [ -f icon.png ]; then
+            ICON_SRC="icon.png"
+          else
+            echo "❌ ERROR: No icon found in resources/icon.png or icon.png"
+            ls -la *.png resources/ || true
             exit 1
           fi
-          echo "✅ Found icon.png, size: $(stat -c%s icon.png) bytes"
+          echo "✅ Found icon: $ICON_SRC, size: $(stat -c%s $ICON_SRC) bytes"
           for d in mipmap-mdpi mipmap-hdpi mipmap-xhdpi mipmap-xxhdpi mipmap-xxxhdpi; do
             mkdir -p android/app/src/main/res/$d
-            cp icon.png android/app/src/main/res/$d/ic_launcher.png
-            cp icon.png android/app/src/main/res/$d/ic_launcher_round.png
-            cp icon.png android/app/src/main/res/$d/ic_launcher_foreground.png
+            cp $ICON_SRC android/app/src/main/res/$d/ic_launcher.png
+            cp $ICON_SRC android/app/src/main/res/$d/ic_launcher_round.png
+            cp $ICON_SRC android/app/src/main/res/$d/ic_launcher_foreground.png
           done
           rm -rf android/app/src/main/res/mipmap-anydpi-v26
           ls -lh android/app/src/main/res/mipmap-xxxhdpi/
