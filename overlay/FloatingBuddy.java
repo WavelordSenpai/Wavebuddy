@@ -30,13 +30,16 @@ public class FloatingBuddy extends Service {
     private WebView web;
     private WindowManager.LayoutParams params;
 
-    // --- THIS IS THE MAGIC CLASS ---
+    // --- FIXED DRAGLAYOUT: now has onTouchEvent, not just intercept ---
     public class DragLayout extends FrameLayout {
         private int initialX, initialY;
         private float initialTouchX, initialTouchY;
         private boolean isDragging = false;
 
-        public DragLayout(android.content.Context ctx) { super(ctx); setBackgroundColor(Color.TRANSPARENT); }
+        public DragLayout(android.content.Context ctx) {
+            super(ctx);
+            setBackgroundColor(Color.TRANSPARENT);
+        }
 
         @Override
         public boolean onInterceptTouchEvent(MotionEvent e) {
@@ -45,23 +48,42 @@ public class FloatingBuddy extends Service {
                     initialX = params.x; initialY = params.y;
                     initialTouchX = e.getRawX(); initialTouchY = e.getRawY();
                     isDragging = false;
-                    return false; // let WebView see DOWN for button press
+                    return false; // let WebView see DOWN for Talk/Home/Bye buttons
                 case MotionEvent.ACTION_MOVE:
                     int dx = (int)(e.getRawX() - initialTouchX);
                     int dy = (int)(e.getRawY() - initialTouchY);
                     if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
                         isDragging = true;
-                        params.x = initialX + dx;
-                        params.y = initialY + dy;
-                        try { windowManager.updateViewLayout(container, params); } catch (Exception ignored) {}
                         return true; // STEAL it - we are dragging
                     }
                     return false;
                 case MotionEvent.ACTION_UP:
-                    if (isDragging) { isDragging = false; return true; }
+                    isDragging = false;
                     return false;
             }
             return false;
+        }
+
+        // THIS WAS MISSING - this is why Buddy was stuck!
+        @Override
+        public boolean onTouchEvent(MotionEvent e) {
+            switch (e.getAction()) {
+                case MotionEvent.ACTION_MOVE:
+                    if (isDragging) {
+                        int dx = (int)(e.getRawX() - initialTouchX);
+                        int dy = (int)(e.getRawY() - initialTouchY);
+                        params.x = initialX + dx;
+                        params.y = initialY + dy;
+                        try { windowManager.updateViewLayout(container, params); } catch (Exception ignored) {}
+                        return true;
+                    }
+                    break;
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                    isDragging = false;
+                    return true;
+            }
+            return super.onTouchEvent(e);
         }
     }
 
@@ -118,16 +140,23 @@ public class FloatingBuddy extends Service {
             web.getSettings().setMediaPlaybackRequiresUserGesture(false);
             web.addJavascriptInterface(new AndroidMini(), "AndroidMini");
 
-            // IMPORTANT: set client BEFORE loadUrl, or it never fires
             web.setWebViewClient(new WebViewClient() {
                 @Override public void onPageFinished(WebView view, String url) {
                     super.onPageFinished(view, url);
+                    // FIXED: kill page white ONLY, NOT Buddy's yellow
+                    // No * selector - Crystal's lesson
                     view.evaluateJavascript(
+                        "(function(){" +
                         "document.documentElement.style.background='transparent';" +
                         "document.body.style.background='transparent';" +
                         "document.body.style.backgroundColor='transparent';" +
+                        "document.documentElement.classList.add('mini-mode');" +
                         "document.body.classList.add('mini-mode');" +
-                        "document.documentElement.classList.add('mini-mode');",
+                        "var s=document.getElementById('mini-fix'); if(!s){" +
+                        "s=document.createElement('style'); s.id='mini-fix';" +
+                        "s.innerHTML='html,body{background:transparent!important} #landing{background:transparent!important;box-shadow:none!important} #chatPanel{display:none!important} #header,#welcomeText,#minimizeBtn{display:none!important} #buddyWrap{background:transparent!important}';" +
+                        "document.head.appendChild(s);}" +
+                        "})();",
                         null
                     );
                 }
@@ -177,4 +206,4 @@ public class FloatingBuddy extends Service {
         try { stopForeground(true); } catch (Exception ignored) {}
     }
     @Override public IBinder onBind(Intent intent) { return null; }
-            }
+}
