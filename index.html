@@ -6,10 +6,11 @@
 <meta name="theme-color" content="#0A0A0A">
 <title>Wave Buddy V3.5 FINAL</title>
 <style>
-	html.mini-mode, body.mini-mode,
-body.mini-mode #landing, body.mini-mode #buddyWrap {
+	/* MINI MODE = NO WHITE - ONE BLOCK ONLY */
+body.mini-mode, body.mini-mode * {
   background: transparent !important;
   background-color: transparent !important;
+  background-image: none !important;
   box-shadow: none !important;
 }
 body.mini-mode #landing { padding: 0 !important; }
@@ -17,6 +18,7 @@ body.mini-mode #chatPanel { display: none !important; }
 body.mini-mode #header, body.mini-mode #welcomeText, body.mini-mode #minimizeBtn {
   display: none !important;
 }
+body.chatting #minimizeBtn { display: none !important; }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important}
 html,body{background:#0A0A0A}
 html.mini-mode, body.mini-mode, body.mini-mode #room{background:transparent !important;background-image:none !important}
