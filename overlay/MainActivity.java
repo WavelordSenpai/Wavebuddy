@@ -34,8 +34,7 @@ public class MainActivity extends Activity {
                 startActivity(i);
             });
         }
-        @JavascriptInterface
-        public void exit() {
+        @JavascriptInterface public void exit() {
             runOnUiThread(() -> {
                 try { stopService(new Intent(MainActivity.this, FloatingBuddy.class)); } catch (Exception ignored) {}
                 finish();
@@ -63,26 +62,25 @@ public class MainActivity extends Activity {
     private void startBuddy() {
         try {
             Intent s = new Intent(this, FloatingBuddy.class);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                startForegroundService(s);
-            } else {
-                startService(s);
-            }
-            // THIS IS THE KEY: whole app collapses, only floating Crystal stays
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(s);
+            else startService(s);
             moveTaskToBack(true);
         } catch (Exception e) {
             Toast.makeText(this, "Could not start floating buddy: " + e.getMessage(), Toast.LENGTH_LONG).show();
         }
     }
 
+    // FIXED: when you tap Talk/Home and come back, kill the floating one so you don't get duplicates
+    @Override protected void onResume() {
+        super.onResume();
+        try { stopService(new Intent(this, FloatingBuddy.class)); } catch (Exception ignored) {}
+    }
+
     @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == REQ_OVERLAY) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Settings.canDrawOverlays(this)) {
-                startBuddy();
-            } else {
-                Toast.makeText(this, "Overlay permission needed to float", Toast.LENGTH_LONG).show();
-            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Settings.canDrawOverlays(this)) startBuddy();
+            else Toast.makeText(this, "Overlay permission needed to float", Toast.LENGTH_LONG).show();
         }
     }
 
