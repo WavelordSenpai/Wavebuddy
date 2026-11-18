@@ -10,7 +10,6 @@ import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.os.Build;
 import android.os.IBinder;
-import android.os.SystemClock;
 import android.provider.Settings;
 import android.view.Gravity;
 import android.view.MotionEvent;
@@ -19,23 +18,52 @@ import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 import android.widget.Toast;
 
 public class FloatingBuddy extends Service {
     private static final String CHANNEL_ID = "wavebuddy_floating";
     private static final int NOTIF_ID = 1;
-
     private WindowManager windowManager;
-    private FrameLayout container;
+    private DragLayout container;
     private WebView web;
     private WindowManager.LayoutParams params;
 
-    private int initialX, initialY;
-    private float initialTouchX, initialTouchY;
-    private float downX, downY;
-    private boolean isDragging = false;
-    private long downTime = 0;
+    // --- THIS IS THE MAGIC CLASS ---
+    public class DragLayout extends FrameLayout {
+        private int initialX, initialY;
+        private float initialTouchX, initialTouchY;
+        private boolean isDragging = false;
+
+        public DragLayout(android.content.Context ctx) { super(ctx); setBackgroundColor(Color.TRANSPARENT); }
+
+        @Override
+        public boolean onInterceptTouchEvent(MotionEvent e) {
+            switch (e.getAction()) {
+                case MotionEvent.ACTION_DOWN:
+                    initialX = params.x; initialY = params.y;
+                    initialTouchX = e.getRawX(); initialTouchY = e.getRawY();
+                    isDragging = false;
+                    return false; // let WebView see DOWN for button press
+                case MotionEvent.ACTION_MOVE:
+                    int dx = (int)(e.getRawX() - initialTouchX);
+                    int dy = (int)(e.getRawY() - initialTouchY);
+                    if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
+                        isDragging = true;
+                        params.x = initialX + dx;
+                        params.y = initialY + dy;
+                        try { windowManager.updateViewLayout(container, params); } catch (Exception ignored) {}
+                        return true; // STEAL it - we are dragging
+                    }
+                    return false;
+                case MotionEvent.ACTION_UP:
+                    if (isDragging) { isDragging = false; return true; }
+                    return false;
+            }
+            return false;
+        }
+    }
 
     public class AndroidMini {
         @JavascriptInterface public void minimize() {}
@@ -73,16 +101,12 @@ public class FloatingBuddy extends Service {
             Toast.makeText(this, "Allow overlay to float Wave Buddy", Toast.LENGTH_LONG).show();
             stopSelf(); return;
         }
-
         try {
             windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
 
-            // --- CONTAINER = TRANSPARENT, HANDLES DRAG ---
-            container = new FrameLayout(this);
+            container = new DragLayout(this);
             container.setBackgroundColor(Color.TRANSPARENT);
-            container.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
-            // --- WEBVIEW = TRANSPARENT, HANDLES TAPS ---
             web = new WebView(this);
             web.setBackgroundColor(Color.TRANSPARENT);
             web.setBackgroundColor(0);
@@ -93,6 +117,21 @@ public class FloatingBuddy extends Service {
             web.getSettings().setAllowFileAccess(true);
             web.getSettings().setMediaPlaybackRequiresUserGesture(false);
             web.addJavascriptInterface(new AndroidMini(), "AndroidMini");
+
+            // IMPORTANT: set client BEFORE loadUrl, or it never fires
+            web.setWebViewClient(new WebViewClient() {
+                @Override public void onPageFinished(WebView view, String url) {
+                    super.onPageFinished(view, url);
+                    view.evaluateJavascript(
+                        "document.documentElement.style.background='transparent';" +
+                        "document.body.style.background='transparent';" +
+                        "document.body.style.backgroundColor='transparent';" +
+                        "document.body.classList.add('mini-mode');" +
+                        "document.documentElement.classList.add('mini-mode');",
+                        null
+                    );
+                }
+            });
 
             container.addView(web);
 
@@ -108,66 +147,8 @@ public class FloatingBuddy extends Service {
             params.x = 0; params.y = 100;
             params.format = PixelFormat.TRANSLUCENT;
 
-            // --- THE MAGIC: DRAG vs TAP SPLITTER ---
-            // Put the touch listener on the CONTAINER, not the WebView
-            container.setOnTouchListener(new View.OnTouchListener() {
-                @Override public boolean onTouch(View v, MotionEvent e) {
-                    switch (e.getAction()) {
-                        case MotionEvent.ACTION_DOWN:
-                            initialX = params.x; initialY = params.y;
-                            initialTouchX = e.getRawX(); initialTouchY = e.getRawY();
-                            downX = e.getRawX(); downY = e.getRawY();
-                            downTime = SystemClock.uptimeMillis();
-                            isDragging = false;
-                            // Don't consume yet - let WebView see the DOWN for button press effect
-                            return false;
-
-                        case MotionEvent.ACTION_MOVE:
-                            int dx = (int)(e.getRawX() - initialTouchX);
-                            int dy = (int)(e.getRawY() - initialTouchY);
-                            if (!isDragging && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
-                                isDragging = true;
-                            }
-                            if (isDragging) {
-                                params.x = initialX + dx;
-                                params.y = initialY + dy;
-                                try { windowManager.updateViewLayout(container, params); } catch (Exception ignored) {}
-                                return true; // We are dragging - eat the MOVE
-                            }
-                            return false;
-
-                        case MotionEvent.ACTION_UP:
-                            if (isDragging) {
-                                isDragging = false;
-                                return true; // Was a drag, don't fire tap
-                            }
-                            // Was a TAP - forward it to WebView so buttons work
-                            // WebView already got DOWN, now give it UP
-                            return false;
-                    }
-                    return false;
-                }
-            });
-
             windowManager.addView(container, params);
             web.loadUrl("file:///android_asset/public/index.html?mode=mini&overlay=1");
-
-            // Force HTML transparent after load - kills white even if CSS missed
-            web.setWebViewClient(new android.webkit.WebViewClient() {
-                @Override public void onPageFinished(WebView view, String url) {
-                    super.onPageFinished(view, url);
-                    view.evaluateJavascript(
-                        "document.documentElement.style.background='transparent';" +
-                        "document.body.style.background='transparent';" +
-                        "document.body.classList.add('mini-mode');" +
-                        "document.documentElement.classList.add('mini-mode');" +
-                        "var l=document.getElementById('landing'); if(l){l.style.background='transparent'; l.style.boxShadow='none';}" +
-                        "var b=document.getElementById('buddyWrap'); if(b){b.style.background='transparent'; b.style.boxShadow='none';}",
-                        null
-                    );
-                }
-            });
-
         } catch (Exception e) {
             Toast.makeText(this, "Floating buddy failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
             stopSelf();
@@ -177,7 +158,6 @@ public class FloatingBuddy extends Service {
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel ch = new NotificationChannel(CHANNEL_ID, "Wave Buddy Floating", NotificationManager.IMPORTANCE_LOW);
-            ch.setDescription("Keeps Wave Buddy floating");
             NotificationManager nm = getSystemService(NotificationManager.class);
             if (nm != null) nm.createNotificationChannel(ch);
         }
@@ -187,7 +167,7 @@ public class FloatingBuddy extends Service {
         i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         PendingIntent pi = PendingIntent.getActivity(this, 0, i, Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0);
         Notification.Builder b = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? new Notification.Builder(this, CHANNEL_ID) : new Notification.Builder(this);
-        return b.setContentTitle("Wave Buddy is floating 💎").setContentText("Tap to open Wave Buddy").setSmallIcon(android.R.drawable.ic_dialog_info).setContentIntent(pi).setOngoing(true).build();
+        return b.setContentTitle("Wave Buddy is floating").setContentText("Tap to open Wave Buddy").setSmallIcon(android.R.drawable.ic_dialog_info).setContentIntent(pi).setOngoing(true).build();
     }
     @Override public int onStartCommand(Intent intent, int flags, int startId) { return START_NOT_STICKY; }
     @Override public void onDestroy() {
@@ -197,4 +177,4 @@ public class FloatingBuddy extends Service {
         try { stopForeground(true); } catch (Exception ignored) {}
     }
     @Override public IBinder onBind(Intent intent) { return null; }
-}
+            }
