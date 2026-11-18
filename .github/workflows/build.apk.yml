@@ -61,6 +61,9 @@ jobs:
             rm -f $DEST/*.java
             ls -l $DEST/ || echo "(DEST now empty, good)"
             cp overlay/*.java $DEST/
+            echo "--- FIX PACKAGE - force all files to com.wavelord.wavebuddy ---"
+            sed -i 's/^package .*/package com.wavelord.wavebuddy;/' $DEST/*.java
+            grep -h "^package" $DEST/*.java
             echo "--- Overlay files copied ---"
             ls -l $DEST/
             echo "--- VALIDATION: each file must contain ONLY its own class ---"
@@ -94,6 +97,8 @@ jobs:
           cp index.html android/app/src/main/assets/public/index.html
           echo "--- Check assets index.html has miniChat ---"
           grep -c "miniChat" android/app/src/main/assets/public/index.html || echo "miniChat NOT FOUND in assets!"
+          echo "--- Check assets index.html has FIXED sendMiniChat (await) ---"
+          grep -c "__miniWaiting" android/app/src/main/assets/public/index.html || echo "⚠️ WARNING: index.html is OLD - no __miniWaiting fix! Thinking will still stick!"
 
           cd android
           chmod +x gradlew
