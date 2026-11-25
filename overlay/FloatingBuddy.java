@@ -8,6 +8,7 @@ import android.app.Service;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
+import android.net.Uri;
 import android.os.Build;
 import android.os.IBinder;
 import android.view.Gravity;
@@ -31,6 +32,12 @@ public class FloatingBuddy extends Service implements TextToSpeech.OnInitListene
     private WindowManager.LayoutParams params;
     private TextToSpeech tts;
     private boolean ttsReady = false;
+
+    private int dpToPx(int dp) {
+        return Math.round(dp * getResources().getDisplayMetrics().density);
+    }
+
+    private String selectedAvatar = "clippy";
 
     public class AndroidMini {
         @JavascriptInterface
@@ -60,13 +67,13 @@ public class FloatingBuddy extends Service implements TextToSpeech.OnInitListene
         }
 
         @JavascriptInterface
-        public void setWindowSize(final int w, final int h) {
+        public void setWindowSize(final int wDp, final int hDp) {
             if (floatingView != null) {
                 floatingView.post(new Runnable() {
                     @Override
                     public void run() {
-                        params.width = w;
-                        params.height = h;
+                        params.width = dpToPx(wDp);
+                        params.height = dpToPx(hDp);
                         try {
                             windowManager.updateViewLayout(floatingView, params);
                         } catch (Exception ignored) {}
@@ -82,12 +89,12 @@ public class FloatingBuddy extends Service implements TextToSpeech.OnInitListene
                     @Override
                     public void run() {
                         if (open) {
-                            params.width = 340;
-                            params.height = 460;
+                            params.width = dpToPx(280);
+                            params.height = dpToPx(300);
                             params.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL | WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH;
                         } else {
-                            params.width = 200;
-                            params.height = 260;
+                            params.width = dpToPx(190);
+                            params.height = dpToPx(240);
                             params.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
                         }
                         try {
@@ -100,7 +107,25 @@ public class FloatingBuddy extends Service implements TextToSpeech.OnInitListene
 
         @JavascriptInterface
         public void setMiniChatOpen(final boolean open) {
-            setChatOpen(open);
+            if (floatingView != null) {
+                floatingView.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (open) {
+                            params.width = dpToPx(340);
+                            params.height = dpToPx(500);
+                            params.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL | WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH;
+                        } else {
+                            params.width = dpToPx(190);
+                            params.height = dpToPx(240);
+                            params.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
+                        }
+                        try {
+                            windowManager.updateViewLayout(floatingView, params);
+                        } catch (Exception ignored) {}
+                    }
+                });
+            }
         }
     }
 
@@ -134,15 +159,15 @@ public class FloatingBuddy extends Service implements TextToSpeech.OnInitListene
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
 
         params = new WindowManager.LayoutParams(
-                200,
-                260,
+                dpToPx(190),
+                dpToPx(240),
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_PHONE,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
                 PixelFormat.TRANSLUCENT);
         params.format = PixelFormat.TRANSLUCENT;
         params.gravity = Gravity.TOP | Gravity.START;
-        params.x = 100;
-        params.y = 300;
+        params.x = dpToPx(24);
+        params.y = dpToPx(120);
         params.alpha = 1.0f;
 
         FrameLayout drag = new FrameLayout(this);
@@ -230,7 +255,7 @@ public class FloatingBuddy extends Service implements TextToSpeech.OnInitListene
 
         drag.addView(webView);
         windowManager.addView(drag, params);
-        webView.loadUrl("file:///android_asset/public/index.html?mode=mini&overlay=1");
+        webView.loadUrl("file:///android_asset/public/index.html?mode=mini&overlay=1&avatar=" + Uri.encode(selectedAvatar));
     }
 
     @Override
@@ -244,6 +269,15 @@ public class FloatingBuddy extends Service implements TextToSpeech.OnInitListene
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        if (intent != null && intent.hasExtra("avatar")) {
+            String av = intent.getStringExtra("avatar");
+            if (av != null && !av.isEmpty()) {
+                selectedAvatar = av;
+                if (webView != null) {
+                    webView.loadUrl("file:///android_asset/public/index.html?mode=mini&overlay=1&avatar=" + Uri.encode(selectedAvatar));
+                }
+            }
+        }
         return START_STICKY;
     }
 

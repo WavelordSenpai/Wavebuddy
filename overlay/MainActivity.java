@@ -37,11 +37,17 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
         @JavascriptInterface public void setMiniChatOpen(boolean open) { /* full app - ignore */ }
 
         // Called when user taps MINIMIZE in full app
-        @JavascriptInterface public void minimize() { startFloating(); }
-        @JavascriptInterface public void startFloating() { startFloating(); }
+        @JavascriptInterface public void minimize() { startFloating(null); }
+        @JavascriptInterface public void minimizeWithAvatar(String avatarKey) { startFloating(avatarKey); }
+        @JavascriptInterface public void startFloating() { startFloating(null); }
     }
 
-    private void startFloating() {
+    private String pendingAvatar = null;
+
+    private void startFloating(String avatarKey) {
+        if (avatarKey != null && !avatarKey.isEmpty()) {
+            pendingAvatar = avatarKey;
+        }
         // Check overlay permission - Android 6+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
             Intent i = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName()));
@@ -49,6 +55,9 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
             return;
         }
         Intent svc = new Intent(this, FloatingBuddy.class);
+        if (pendingAvatar != null && !pendingAvatar.isEmpty()) {
+            svc.putExtra("avatar", pendingAvatar);
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(svc);
         else startService(svc);
         // Go home - let Buddy float over other apps
@@ -89,7 +98,7 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
                 view.evaluateJavascript(
                         "(function(){"
                         + "var btn=document.getElementById('minimizeBtn');"
-                        + "if(btn && !btn.__hooked){"
+                        + "if(btn && !btn.__hooked && typeof window.tryMinimize !== 'function'){"
                         + "btn.__hooked=true;"
                         + "btn.addEventListener('click', function(e){"
                         + "e.preventDefault(); e.stopPropagation();"
@@ -108,7 +117,7 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == OVERLAY_REQ) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Settings.canDrawOverlays(this)) {
-                startFloating();
+                startFloating(pendingAvatar);
             }
         }
     }
